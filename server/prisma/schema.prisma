@@ -1,0 +1,60 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique
+  passwordHash String
+  name         String
+  githubId     String?       @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  snippets     CodeSnippet[]
+  reviews      Review[]
+}
+
+model CodeSnippet {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String      @db.Uuid
+  filename   String
+  language   String
+  rawCode    String
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews    Review[]
+  embeddings Embedding[]
+
+  @@index([userId])
+}
+
+model Review {
+  id               String      @id @default(uuid()) @db.Uuid
+  snippetId        String      @db.Uuid
+  userId           String      @db.Uuid
+  feedbackMarkdown String
+  score            Int
+  createdAt        DateTime    @default(now())
+  snippet          CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([snippetId])
+  @@index([userId])
+}
+
+model Embedding {
+  id        String      @id @default(uuid()) @db.Uuid
+  snippetId String      @db.Uuid
+  content   String
+  embedding Unsupported("vector(768)")
+  snippet   CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+
+  @@index([snippetId])
+}
