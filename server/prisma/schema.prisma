@@ -10,15 +10,18 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  passwordHash String
-  name         String
-  githubId     String?       @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  snippets     CodeSnippet[]
-  reviews      Review[]
+  id                String        @id @default(uuid()) @db.Uuid
+  email             String?       @unique
+  passwordHash      String?
+  name              String
+  githubId          String?       @unique
+  githubAccessToken String?
+  githubUsername    String?
+  githubAvatarUrl   String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  snippets          CodeSnippet[]
+  reviews           Review[]
 }
 
 model CodeSnippet {
