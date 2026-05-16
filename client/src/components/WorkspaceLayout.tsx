@@ -5,6 +5,7 @@ const navigation = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/review", label: "Review" },
   { to: "/search", label: "Search" },
+  { to: "/settings", label: "Settings" },
 ] as const;
 
 export function WorkspaceLayout() {

@@ -21,7 +21,13 @@ const envSchema = z.object({
     .string()
     .url()
     .default("http://localhost:3000/auth/github/callback"),
+  GITHUB_WEBHOOK_SECRET: z.string().min(1).default("development-webhook-secret"),
+  WEBHOOK_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3000/webhooks/github"),
   GEMINI_API_KEY: z.string().default(""),
+  REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 
 const parsedEnv = envSchema.parse(process.env);

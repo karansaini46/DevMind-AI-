@@ -18,6 +18,8 @@ model User {
   githubAccessToken String?
   githubUsername    String?
   githubAvatarUrl   String?
+  connectedRepo     String?
+  webhookId         String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   snippets          CodeSnippet[]
@@ -44,6 +46,7 @@ model Review {
   userId           String      @db.Uuid
   feedbackMarkdown String
   score            Int
+  source           String      @default("manual")
   createdAt        DateTime    @default(now())
   snippet          CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
   user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)

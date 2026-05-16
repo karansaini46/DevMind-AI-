@@ -1,15 +1,20 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
-import { embedAndStore } from "../embeddings/service";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import {
-  createReview,
   scoreReview,
   streamReview,
   type ReviewInput,
 } from "../reviews/chains";
-import { AppError } from "../utils/app-error";
+import {
+  createCompletedReview,
+  createSnippet,
+  createStoredReview,
+  indexSnippet,
+  isRateLimitError,
+} from "../reviews/service";
+import { subscribeToAutoReviews } from "../services/review-events";
 import { asyncHandler } from "../utils/async-handler";
 
 const reviewRequestSchema = z.object({
@@ -41,6 +46,66 @@ const filenameByLanguage = {
 export const reviewsRouter = Router();
 
 reviewsRouter.use(authMiddleware);
+
+reviewsRouter.get(
+  "/auto",
+  asyncHandler(async (request, response) => {
+    const limit = Math.min(
+      Number.parseInt(String(request.query.limit ?? "10"), 10) || 10,
+      50,
+    );
+    const reviews = await prisma.review.findMany({
+      where: {
+        userId: request.user!.id,
+        source: "webhook",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+      select: {
+        id: true,
+        snippetId: true,
+        feedbackMarkdown: true,
+        score: true,
+        createdAt: true,
+        source: true,
+        snippet: {
+          select: {
+            filename: true,
+            language: true,
+          },
+        },
+      },
+    });
+
+    response.status(200).json({
+      reviews: reviews.map(toAutoReviewResponse),
+    });
+  }),
+);
+
+reviewsRouter.get("/auto/events", (request, response) => {
+  response.setHeader("Content-Type", "text/event-stream");
+  response.setHeader("Cache-Control", "no-cache");
+  response.setHeader("Connection", "keep-alive");
+  response.setHeader("X-Accel-Buffering", "no");
+  response.flushHeaders();
+  response.write(": connected\n\n");
+
+  const unsubscribe = subscribeToAutoReviews(request.user!.id, (review) => {
+    writeEvent(response, "review", review);
+  });
+  const heartbeat = setInterval(() => {
+    response.write(": keep-alive\n\n");
+  }, 25_000);
+
+  request.on("close", () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+    response.end();
+  });
+});
 
 reviewsRouter.post(
   "/",
@@ -118,52 +183,14 @@ function toReviewInput(input: z.infer<typeof reviewRequestSchema>): ReviewInput 
   };
 }
 
-async function createSnippet(userId: string, input: ReviewInput) {
-  return prisma.codeSnippet.create({
-    data: {
-      userId,
-      filename: input.filename,
-      language: input.language,
-      rawCode: input.code,
-    },
-  });
-}
-
-async function createStoredReview(input: {
-  snippetId: string;
-  userId: string;
-  markdown: string;
-  score: number;
-}) {
-  return prisma.review.create({
-    data: {
-      snippetId: input.snippetId,
-      userId: input.userId,
-      feedbackMarkdown: input.markdown,
-      score: input.score,
-    },
-  });
-}
-
-async function createCompletedReview(input: ReviewInput) {
-  try {
-    const markdown = await createReview(input);
-    const score = await scoreReview(input);
-
-    return { markdown, score };
-  } catch (error) {
-    if (isRateLimitError(error)) {
-      throw new AppError("Too many requests, wait a moment", 429);
-    }
-
-    throw error;
-  }
-}
-
 function writeEvent(
   response: Response,
-  event: "message" | "error" | "indexing",
-  data: string | { message: string } | { searchIndexed: boolean },
+  event: "message" | "error" | "indexing" | "review",
+  data:
+    | string
+    | { message: string }
+    | { searchIndexed: boolean }
+    | ReturnType<typeof toAutoReviewResponse>,
 ) {
   if (event !== "message") {
     response.write(`event: ${event}\n`);
@@ -172,39 +199,32 @@ function writeEvent(
   response.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-async function indexSnippet(snippetId: string, code: string) {
-  try {
-    await embedAndStore(snippetId, code);
-    return true;
-  } catch (error) {
-    console.error(`Unable to index snippet ${snippetId}`, error);
-    return false;
-  }
-}
-
 function toClientMessage(error: unknown) {
   return isRateLimitError(error)
     ? "Too many requests, wait a moment"
     : "Unable to complete the review";
 }
 
-function isRateLimitError(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const candidate = error as {
-    status?: number;
-    statusCode?: number;
-    message?: string;
-    response?: { status?: number };
+function toAutoReviewResponse(review: {
+  id: string;
+  snippetId: string;
+  feedbackMarkdown: string;
+  score: number;
+  createdAt: Date;
+  source: string;
+  snippet: {
+    filename: string;
+    language: string;
   };
-
-  return (
-    candidate.status === 429 ||
-    candidate.statusCode === 429 ||
-    candidate.response?.status === 429 ||
-    candidate.message?.includes("429") === true ||
-    candidate.message?.includes("RESOURCE_EXHAUSTED") === true
-  );
+}) {
+  return {
+    id: review.id,
+    snippetId: review.snippetId,
+    markdown: review.feedbackMarkdown,
+    score: review.score,
+    createdAt: review.createdAt,
+    source: review.source,
+    filename: review.snippet.filename,
+    language: review.snippet.language,
+  };
 }
