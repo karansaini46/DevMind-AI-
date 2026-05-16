@@ -27,15 +27,16 @@ model User {
 }
 
 model CodeSnippet {
-  id         String      @id @default(uuid()) @db.Uuid
-  userId     String      @db.Uuid
-  filename   String
-  language   String
-  rawCode    String
-  createdAt  DateTime    @default(now())
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviews    Review[]
-  embeddings Embedding[]
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  filename      String
+  language      String
+  rawCode       String
+  createdAt     DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews       Review[]
+  embeddings    Embedding[]
+  documentation Documentation?
 
   @@index([userId])
 }
@@ -63,4 +64,14 @@ model Embedding {
   snippet   CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
 
   @@index([snippetId])
+}
+
+model Documentation {
+  id            String      @id @default(uuid()) @db.Uuid
+  snippetId     String      @unique @db.Uuid
+  commentedCode String
+  readmeSection String
+  language      String
+  createdAt     DateTime    @default(now())
+  snippet       CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
 }

@@ -141,6 +141,7 @@ reviewsRouter.post("/stream", async (request, response, next) => {
     response.setHeader("Connection", "keep-alive");
     response.setHeader("X-Accel-Buffering", "no");
     response.flushHeaders();
+    writeEvent(response, "snippet", { snippetId: snippet.id });
 
     let markdown = "";
     const stream = await streamReview(input);
@@ -185,11 +186,12 @@ function toReviewInput(input: z.infer<typeof reviewRequestSchema>): ReviewInput 
 
 function writeEvent(
   response: Response,
-  event: "message" | "error" | "indexing" | "review",
+  event: "message" | "error" | "indexing" | "review" | "snippet",
   data:
     | string
     | { message: string }
     | { searchIndexed: boolean }
+    | { snippetId: string }
     | ReturnType<typeof toAutoReviewResponse>,
 ) {
   if (event !== "message") {

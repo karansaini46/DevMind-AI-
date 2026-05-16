@@ -6,6 +6,7 @@ import passport from "passport";
 import "./config/passport";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { authRouter } from "./routes/auth";
+import { docsRouter } from "./routes/docs";
 import { githubWebhooksRouter } from "./routes/github-webhooks";
 import { healthRouter } from "./routes/health";
 import { reviewsRouter } from "./routes/reviews";
@@ -30,6 +31,7 @@ app.use(passport.initialize());
 
 app.use("/health", healthRouter);
 app.use("/auth", authRouter);
+app.use("/docs", docsRouter);
 app.use("/reviews", reviewsRouter);
 app.use("/search", searchRouter);
 app.use("/settings", settingsRouter);

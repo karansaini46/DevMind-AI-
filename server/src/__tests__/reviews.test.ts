@@ -162,6 +162,8 @@ describe("review routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("text/event-stream");
+    expect(response.text).toContain("event: snippet");
+    expect(response.text).toContain('data: {"snippetId":"snippet-1"}');
     expect(response.text).toContain('data: "# Review"');
     expect(response.text).toContain('data: "\\nUseful feedback"');
     expect(response.text).toContain('event: indexing');

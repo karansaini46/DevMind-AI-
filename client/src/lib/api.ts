@@ -44,6 +44,15 @@ export interface AutoReview {
   language: string;
 }
 
+export interface Documentation {
+  id: string;
+  snippetId: string;
+  commentedCode: string;
+  readmeSection: string;
+  language: string;
+  createdAt: string;
+}
+
 export async function parseApiError(response: Response) {
   const body = (await response.json().catch(() => null)) as
     | { message?: string }
