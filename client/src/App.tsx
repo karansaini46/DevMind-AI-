@@ -6,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { WorkspaceLayout } from "./components/WorkspaceLayout";
 import { AuthSuccessPage } from "./pages/AuthSuccessPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -15,6 +16,18 @@ import { useAuthStore } from "./store/auth-store";
 const CodeReviewPage = lazy(() =>
   import("./pages/CodeReviewPage").then((module) => ({
     default: module.CodeReviewPage,
+  })),
+);
+
+const SearchPage = lazy(() =>
+  import("./pages/SearchPage").then((module) => ({
+    default: module.SearchPage,
+  })),
+);
+
+const SnippetDetailPage = lazy(() =>
+  import("./pages/SnippetDetailPage").then((module) => ({
+    default: module.SnippetDetailPage,
   })),
 );
 
@@ -33,15 +46,33 @@ export function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/auth/success" element={<AuthSuccessPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route
-            path="/review"
-            element={
-              <Suspense fallback={<LoadingState message="Loading review workspace." />}>
-                <CodeReviewPage />
-              </Suspense>
-            }
-          />
+          <Route element={<WorkspaceLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/review"
+              element={
+                <Suspense fallback={<LoadingState message="Loading review workspace." />}>
+                  <CodeReviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <Suspense fallback={<LoadingState message="Loading search." />}>
+                  <SearchPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/snippets/:snippetId"
+              element={
+                <Suspense fallback={<LoadingState message="Loading snippet." />}>
+                  <SnippetDetailPage />
+                </Suspense>
+              }
+            />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

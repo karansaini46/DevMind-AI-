@@ -15,6 +15,24 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface SearchResult {
+  id: string;
+  filename: string;
+  language: string;
+  rawCode: string;
+  createdAt: string;
+  content: string;
+  distance: number;
+}
+
+export interface Snippet {
+  id: string;
+  filename: string;
+  language: string;
+  rawCode: string;
+  createdAt: string;
+}
+
 export async function parseApiError(response: Response) {
   const body = (await response.json().catch(() => null)) as
     | { message?: string }

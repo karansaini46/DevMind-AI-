@@ -168,6 +168,12 @@ h2 {
   font-size: 0.9rem;
 }
 
+.form-note {
+  margin: 0;
+  color: #53657f;
+  font-size: 0.9rem;
+}
+
 .auth-switch {
   margin: 1rem 0 0;
   color: #53657f;
@@ -178,12 +184,66 @@ h2 {
   font-weight: 700;
 }
 
-.dashboard-shell {
+.workspace-shell {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+}
+
+.workspace-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 2rem;
+  padding: 2rem 1.25rem;
+  border-right: 1px solid rgba(24, 33, 47, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.workspace-sidebar .eyebrow {
+  margin-bottom: 0.15rem;
+}
+
+.workspace-nav {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.workspace-link {
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.85rem;
+  color: #53657f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.workspace-link.is-active {
+  color: #18212f;
+  background: rgba(24, 33, 47, 0.08);
+}
+
+.workspace-main {
+  min-width: 0;
   display: grid;
   align-content: start;
   gap: 1.5rem;
   padding: 2rem;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.workspace-header .eyebrow {
+  margin-bottom: 0.15rem;
+}
+
+.dashboard-page {
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
 }
 
 .navbar {
@@ -221,12 +281,10 @@ h2 {
   padding: 1.5rem;
 }
 
-.review-shell {
-  min-height: 100vh;
+.review-page {
   display: grid;
   align-content: start;
   gap: 1.5rem;
-  padding: 2rem;
 }
 
 .review-grid {
@@ -242,6 +300,112 @@ h2 {
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 1.5rem 3rem rgba(24, 33, 47, 0.08);
+}
+
+.search-page,
+.snippet-page {
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+}
+
+.search-card,
+.empty-state {
+  border: 1px solid rgba(24, 33, 47, 0.08);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1.5rem 3rem rgba(24, 33, 47, 0.08);
+}
+
+.search-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.search-card h1,
+.snippet-header h1 {
+  margin-bottom: 0;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.search-form {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.search-form input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(24, 33, 47, 0.14);
+  border-radius: 999px;
+  padding: 0.85rem 1rem;
+  background: #fff;
+}
+
+.search-results {
+  display: grid;
+  gap: 1rem;
+}
+
+.search-result-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid rgba(24, 33, 47, 0.08);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1.25rem 2.5rem rgba(24, 33, 47, 0.06);
+  text-decoration: none;
+}
+
+.search-result-header,
+.snippet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.search-result-header h2 {
+  margin-bottom: 0.4rem;
+}
+
+.language-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  color: #2447b8;
+  background: rgba(51, 102, 255, 0.12);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.search-preview {
+  max-height: 8.5rem;
+  overflow: hidden;
+  margin: 0;
+  border-radius: 1rem;
+  padding: 1rem;
+  white-space: pre-wrap;
+  color: #f8fafc;
+  background: #18212f;
+}
+
+.empty-state {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.5rem;
+}
+
+.empty-state h2,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state p {
+  color: #53657f;
 }
 
 .review-form {
@@ -356,12 +520,30 @@ h2 {
 
 @media (max-width: 640px) {
   .app-shell,
-  .dashboard-shell,
-  .review-shell {
+  .workspace-main {
     padding: 1rem;
   }
 
-  .navbar {
+  .workspace-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-sidebar {
+    gap: 1rem;
+    border-right: 0;
+    border-bottom: 1px solid rgba(24, 33, 47, 0.08);
+  }
+
+  .workspace-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workspace-link {
+    text-align: center;
+  }
+
+  .navbar,
+  .workspace-header {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -372,7 +554,10 @@ h2 {
   }
 
   .review-form-header,
-  .review-output-header {
+  .review-output-header,
+  .search-form,
+  .search-result-header,
+  .snippet-header {
     flex-direction: column;
   }
 }

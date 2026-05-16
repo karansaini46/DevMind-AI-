@@ -1,26 +1,13 @@
-import { go } from "@codemirror/lang-go";
-import { javascript } from "@codemirror/lang-javascript";
-import { python } from "@codemirror/lang-python";
-import { rust } from "@codemirror/lang-rust";
 import CodeMirror from "@uiw/react-codemirror";
 import { useMemo, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
-import { Link } from "react-router-dom";
 import { API_URL, parseApiError } from "../lib/api";
+import {
+  getLanguageExtensions,
+  languages,
+  type Language,
+} from "../lib/code-editor";
 import { useAuthStore } from "../store/auth-store";
-
-const languages = [
-  { value: "javascript", label: "JavaScript" },
-  { value: "typescript", label: "TypeScript" },
-  { value: "python", label: "Python" },
-  { value: "go", label: "Go" },
-  { value: "rust", label: "Rust" },
-  { value: "java", label: "Java" },
-  { value: "cpp", label: "C++" },
-  { value: "other", label: "Other" },
-] as const;
-
-type Language = (typeof languages)[number]["value"];
 
 export function CodeReviewPage() {
   const token = useAuthStore((state) => state.token);
@@ -32,23 +19,9 @@ export function CodeReviewPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [indexingWarning, setIndexingWarning] = useState<string | null>(null);
 
-  const extensions = useMemo(() => {
-    switch (language) {
-      case "javascript":
-        return [javascript()];
-      case "typescript":
-        return [javascript({ typescript: true })];
-      case "python":
-        return [python()];
-      case "go":
-        return [go()];
-      case "rust":
-        return [rust()];
-      default:
-        return [];
-    }
-  }, [language]);
+  const extensions = useMemo(() => getLanguageExtensions(language), [language]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,6 +40,7 @@ export function CodeReviewPage() {
     setMarkdown("");
     setCopied(false);
     setIsSaved(false);
+    setIndexingWarning(null);
     setIsStreaming(true);
 
     try {
@@ -95,6 +69,11 @@ export function CodeReviewPage() {
         onDone() {
           setIsSaved(true);
         },
+        onIndexing(searchIndexed) {
+          if (!searchIndexed) {
+            setIndexingWarning("Saved, but search indexing is pending.");
+          }
+        },
       });
     } catch (caughtError) {
       setError(
@@ -111,18 +90,7 @@ export function CodeReviewPage() {
   }
 
   return (
-    <main className="review-shell">
-      <header className="navbar">
-        <div>
-          <p className="eyebrow">DevMind</p>
-          <strong>Code review</strong>
-        </div>
-
-        <Link className="ghost-link" to="/dashboard">
-          Back to dashboard
-        </Link>
-      </header>
-
+    <section className="review-page">
       <section className="review-grid">
         <form className="review-form" onSubmit={(event) => void handleSubmit(event)}>
           <div className="review-form-header">
@@ -178,6 +146,7 @@ export function CodeReviewPage() {
           </div>
 
           {error ? <p className="form-error">{error}</p> : null}
+          {indexingWarning ? <p className="form-note">{indexingWarning}</p> : null}
         </form>
 
         <section className="review-output">
@@ -214,7 +183,7 @@ export function CodeReviewPage() {
           )}
         </section>
       </section>
-    </main>
+    </section>
   );
 }
 
@@ -223,6 +192,7 @@ async function readReviewStream(
   handlers: {
     onChunk: (chunk: string) => void;
     onDone: () => void;
+    onIndexing: (searchIndexed: boolean) => void;
   },
 ) {
   const reader = body.getReader();
@@ -256,6 +226,11 @@ async function readReviewStream(
         return;
       }
 
+      if (event.type === "indexing") {
+        handlers.onIndexing(event.searchIndexed);
+        continue;
+      }
+
       handlers.onChunk(event.chunk);
     }
   }
@@ -287,6 +262,14 @@ function parseEventFrame(frame: string) {
     return {
       type: "error" as const,
       message: parsed.message ?? "Unable to complete review",
+    };
+  }
+
+  if (event === "indexing") {
+    const parsed = JSON.parse(data) as { searchIndexed?: boolean };
+    return {
+      type: "indexing" as const,
+      searchIndexed: parsed.searchIndexed === true,
     };
   }
 

@@ -1,5 +1,6 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
+import { embedAndStore } from "../embeddings/service";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import {
@@ -53,12 +54,14 @@ reviewsRouter.post(
       markdown,
       score,
     });
+    const searchIndexed = await indexSnippet(snippet.id, input.code);
 
     response.status(201).json({
       reviewId: review.id,
       snippetId: snippet.id,
       markdown,
       score,
+      searchIndexed,
     });
   }),
 );
@@ -89,7 +92,9 @@ reviewsRouter.post("/stream", async (request, response, next) => {
       markdown,
       score,
     });
+    const searchIndexed = await indexSnippet(snippet.id, input.code);
 
+    writeEvent(response, "indexing", { searchIndexed });
     response.write("data: [DONE]\n\n");
     response.end();
   } catch (error) {
@@ -155,12 +160,26 @@ async function createCompletedReview(input: ReviewInput) {
   }
 }
 
-function writeEvent(response: Response, event: "message" | "error", data: string | { message: string }) {
+function writeEvent(
+  response: Response,
+  event: "message" | "error" | "indexing",
+  data: string | { message: string } | { searchIndexed: boolean },
+) {
   if (event !== "message") {
     response.write(`event: ${event}\n`);
   }
 
   response.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+async function indexSnippet(snippetId: string, code: string) {
+  try {
+    await embedAndStore(snippetId, code);
+    return true;
+  } catch (error) {
+    console.error(`Unable to index snippet ${snippetId}`, error);
+    return false;
+  }
 }
 
 function toClientMessage(error: unknown) {
