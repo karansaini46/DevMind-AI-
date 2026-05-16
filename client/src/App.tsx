@@ -8,7 +8,6 @@ import {
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { WorkspaceLayout } from "./components/WorkspaceLayout";
 import { AuthSuccessPage } from "./pages/AuthSuccessPage";
-import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -20,9 +19,27 @@ const CodeReviewPage = lazy(() =>
   })),
 );
 
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
+
 const SearchPage = lazy(() =>
   import("./pages/SearchPage").then((module) => ({
     default: module.SearchPage,
+  })),
+);
+
+const HistoryPage = lazy(() =>
+  import("./pages/HistoryPage").then((module) => ({
+    default: module.HistoryPage,
+  })),
+);
+
+const ReviewDetailPage = lazy(() =>
+  import("./pages/ReviewDetailPage").then((module) => ({
+    default: module.ReviewDetailPage,
   })),
 );
 
@@ -48,13 +65,36 @@ export function App() {
         <Route path="/auth/success" element={<AuthSuccessPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<WorkspaceLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Suspense fallback={<LoadingState message="Loading dashboard." />}>
+                  <DashboardPage />
+                </Suspense>
+              }
+            />
             <Route path="/settings" element={<SettingsPage />} />
             <Route
               path="/review"
               element={
                 <Suspense fallback={<LoadingState message="Loading review workspace." />}>
                   <CodeReviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <Suspense fallback={<LoadingState message="Loading review history." />}>
+                  <HistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/reviews/:reviewId"
+              element={
+                <Suspense fallback={<LoadingState message="Loading review." />}>
+                  <ReviewDetailPage />
                 </Suspense>
               }
             />
