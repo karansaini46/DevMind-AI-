@@ -21,6 +21,7 @@ const envSchema = z.object({
     .string()
     .url()
     .default("http://localhost:3000/auth/github/callback"),
+  GEMINI_API_KEY: z.string().default(""),
 });
 
 const parsedEnv = envSchema.parse(process.env);

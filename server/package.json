@@ -12,6 +12,8 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.46",
+    "@langchain/google": "^0.1.11",
     "@prisma/client": "^6.7.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

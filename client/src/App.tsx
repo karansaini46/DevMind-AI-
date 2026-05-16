@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -11,6 +11,12 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { useAuthStore } from "./store/auth-store";
+
+const CodeReviewPage = lazy(() =>
+  import("./pages/CodeReviewPage").then((module) => ({
+    default: module.CodeReviewPage,
+  })),
+);
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -28,6 +34,14 @@ export function App() {
         <Route path="/auth/success" element={<AuthSuccessPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/review"
+            element={
+              <Suspense fallback={<LoadingState message="Loading review workspace." />}>
+                <CodeReviewPage />
+              </Suspense>
+            }
+          />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -40,15 +54,19 @@ function HomeRedirect() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (!initialized) {
-    return (
-      <main className="app-shell">
-        <section className="status-card">
-          <p className="eyebrow">DevMind</p>
-          <h1>Loading your workspace.</h1>
-        </section>
-      </main>
-    );
+    return <LoadingState message="Loading your workspace." />;
   }
 
   return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+}
+
+function LoadingState({ message }: { message: string }) {
+  return (
+    <main className="app-shell">
+      <section className="status-card">
+        <p className="eyebrow">DevMind</p>
+        <h1>{message}</h1>
+      </section>
+    </main>
+  );
 }

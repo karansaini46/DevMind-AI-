@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { API_URL, parseApiError } from "../lib/api";
 import { useAuthStore } from "../store/auth-store";
 
@@ -68,6 +69,9 @@ export function DashboardPage() {
         <p className="hero-copy">
           Your account is ready for the product layer that comes next.
         </p>
+        <Link className="primary-link" to="/review">
+          Start a code review
+        </Link>
       </section>
 
       <section className="connect-card">
