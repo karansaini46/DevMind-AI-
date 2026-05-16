@@ -1,7 +1,12 @@
 import CodeMirror from "@uiw/react-codemirror";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
-import { API_URL, parseApiError } from "../lib/api";
+import { DocumentationPanel } from "../components/DocumentationPanel";
+import {
+  API_URL,
+  parseApiError,
+  type Documentation,
+} from "../lib/api";
 import {
   getLanguageExtensions,
   languages,
@@ -18,10 +23,91 @@ export function CodeReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedReview, setCopiedReview] = useState(false);
   const [indexingWarning, setIndexingWarning] = useState<string | null>(null);
+  const [snippetId, setSnippetId] = useState<string | null>(null);
+  const [activeResultTab, setActiveResultTab] = useState<"review" | "documentation">(
+    "review",
+  );
+  const [activeDocumentationTab, setActiveDocumentationTab] = useState<
+    "commentedCode" | "readmeSection"
+  >("commentedCode");
+  const [documentation, setDocumentation] = useState<Documentation | null>(null);
+  const [documentationError, setDocumentationError] = useState<string | null>(null);
+  const [hasLoadedDocumentation, setHasLoadedDocumentation] = useState(false);
+  const [isLoadingDocumentation, setIsLoadingDocumentation] = useState(false);
+  const [isGeneratingDocumentation, setIsGeneratingDocumentation] = useState(false);
+  const [copiedCommentedCode, setCopiedCommentedCode] = useState(false);
+  const [copiedReadmeSection, setCopiedReadmeSection] = useState(false);
 
   const extensions = useMemo(() => getLanguageExtensions(language), [language]);
+  const documentationExtensions = useMemo(
+    () => getLanguageExtensions(documentation?.language.toLowerCase() ?? "other"),
+    [documentation?.language],
+  );
+
+  useEffect(() => {
+    if (
+      activeResultTab !== "documentation" ||
+      !token ||
+      !snippetId ||
+      hasLoadedDocumentation
+    ) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadDocumentation() {
+      setIsLoadingDocumentation(true);
+      setDocumentationError(null);
+
+      try {
+        const response = await fetch(`${API_URL}/docs/${snippetId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+        });
+
+        if (response.status === 404) {
+          if (isMounted) {
+            setHasLoadedDocumentation(true);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(await parseApiError(response));
+        }
+
+        const body = (await response.json()) as Documentation;
+
+        if (isMounted) {
+          setDocumentation(body);
+          setHasLoadedDocumentation(true);
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setDocumentationError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Unable to load documentation",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingDocumentation(false);
+        }
+      }
+    }
+
+    void loadDocumentation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeResultTab, hasLoadedDocumentation, snippetId, token]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,9 +124,17 @@ export function CodeReviewPage() {
 
     setError(null);
     setMarkdown("");
-    setCopied(false);
+    setCopiedReview(false);
     setIsSaved(false);
     setIndexingWarning(null);
+    setSnippetId(null);
+    setActiveResultTab("review");
+    setActiveDocumentationTab("commentedCode");
+    setDocumentation(null);
+    setDocumentationError(null);
+    setHasLoadedDocumentation(false);
+    setCopiedCommentedCode(false);
+    setCopiedReadmeSection(false);
     setIsStreaming(true);
 
     try {
@@ -74,6 +168,9 @@ export function CodeReviewPage() {
             setIndexingWarning("Saved, but search indexing is pending.");
           }
         },
+        onSnippet(nextSnippetId) {
+          setSnippetId(nextSnippetId);
+        },
       });
     } catch (caughtError) {
       setError(
@@ -86,7 +183,65 @@ export function CodeReviewPage() {
 
   async function handleCopy() {
     await navigator.clipboard.writeText(markdown);
-    setCopied(true);
+    setCopiedReview(true);
+  }
+
+  async function handleGenerateDocumentation() {
+    if (!token || !snippetId) {
+      setDocumentationError("Save a review before generating documentation");
+      return;
+    }
+
+    setDocumentationError(null);
+    setCopiedCommentedCode(false);
+    setCopiedReadmeSection(false);
+    setIsGeneratingDocumentation(true);
+
+    try {
+      const response = await fetch(`${API_URL}/docs/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ snippetId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+
+      const body = (await response.json()) as Documentation;
+      setDocumentation(body);
+      setHasLoadedDocumentation(true);
+    } catch (caughtError) {
+      setDocumentationError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to generate documentation",
+      );
+    } finally {
+      setIsGeneratingDocumentation(false);
+    }
+  }
+
+  async function handleCopyCommentedCode() {
+    if (!documentation) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(documentation.commentedCode);
+    setCopiedCommentedCode(true);
+  }
+
+  async function handleCopyReadmeSection() {
+    if (!documentation) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(documentation.readmeSection);
+    setCopiedReadmeSection(true);
   }
 
   return (
@@ -150,36 +305,85 @@ export function CodeReviewPage() {
         </form>
 
         <section className="review-output">
-          <div className="review-output-header">
-            <div>
-              <p className="eyebrow">Review</p>
-              <h2>{markdown ? "Feedback" : "Waiting for code"}</h2>
-            </div>
-
-            {markdown && !isStreaming && !error ? (
-              <div className="review-actions">
-                <button className="ghost-button" type="button" onClick={() => void handleCopy()}>
-                  {copied ? "Copied" : "Copy Review"}
-                </button>
-                <button className="ghost-button" type="button" disabled>
-                  {isSaved ? "Saved" : "Save"}
-                </button>
-                <button className="ghost-button" type="button" disabled>
-                  View History
-                </button>
-              </div>
-            ) : null}
+          <div className="result-tabs" role="tablist" aria-label="Results">
+            <button
+              className={activeResultTab === "review" ? "result-tab is-active" : "result-tab"}
+              type="button"
+              role="tab"
+              aria-selected={activeResultTab === "review"}
+              onClick={() => setActiveResultTab("review")}
+            >
+              Review
+            </button>
+            <button
+              className={
+                activeResultTab === "documentation"
+                  ? "result-tab is-active"
+                  : "result-tab"
+              }
+              type="button"
+              role="tab"
+              aria-selected={activeResultTab === "documentation"}
+              onClick={() => setActiveResultTab("documentation")}
+            >
+              Documentation
+            </button>
           </div>
 
-          {markdown ? (
-            <article className="markdown-output">
-              <ReactMarkdown>{markdown}</ReactMarkdown>
-              {isStreaming ? <span className="stream-cursor" aria-hidden="true" /> : null}
-            </article>
+          {activeResultTab === "review" ? (
+            <>
+              <div className="review-output-header">
+                <div>
+                  <p className="eyebrow">Review</p>
+                  <h2>{markdown ? "Feedback" : "Waiting for code"}</h2>
+                </div>
+
+                {markdown && !isStreaming && !error ? (
+                  <div className="review-actions">
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => void handleCopy()}
+                    >
+                      {copiedReview ? "Copied" : "Copy Review"}
+                    </button>
+                    <button className="ghost-button" type="button" disabled>
+                      {isSaved ? "Saved" : "Save"}
+                    </button>
+                    <button className="ghost-button" type="button" disabled>
+                      View History
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {markdown ? (
+                <article className="markdown-output">
+                  <ReactMarkdown>{markdown}</ReactMarkdown>
+                  {isStreaming ? <span className="stream-cursor" aria-hidden="true" /> : null}
+                </article>
+              ) : (
+                <p className="empty-review">
+                  Paste a snippet on the left and the review will unfold here as it arrives.
+                </p>
+              )}
+            </>
           ) : (
-            <p className="empty-review">
-              Paste a snippet on the left and the review will unfold here as it arrives.
-            </p>
+            <DocumentationPanel
+              activeTab={activeDocumentationTab}
+              documentation={documentation}
+              documentationExtensions={documentationExtensions}
+              error={documentationError}
+              hasSnippet={Boolean(snippetId)}
+              isGenerating={isGeneratingDocumentation}
+              isLoading={isLoadingDocumentation}
+              copiedCommentedCode={copiedCommentedCode}
+              copiedReadmeSection={copiedReadmeSection}
+              onGenerate={() => void handleGenerateDocumentation()}
+              onTabChange={setActiveDocumentationTab}
+              onCopyCommentedCode={() => void handleCopyCommentedCode()}
+              onCopyReadmeSection={() => void handleCopyReadmeSection()}
+            />
           )}
         </section>
       </section>
@@ -193,6 +397,7 @@ async function readReviewStream(
     onChunk: (chunk: string) => void;
     onDone: () => void;
     onIndexing: (searchIndexed: boolean) => void;
+    onSnippet: (snippetId: string) => void;
   },
 ) {
   const reader = body.getReader();
@@ -228,6 +433,11 @@ async function readReviewStream(
 
       if (event.type === "indexing") {
         handlers.onIndexing(event.searchIndexed);
+        continue;
+      }
+
+      if (event.type === "snippet") {
+        handlers.onSnippet(event.snippetId);
         continue;
       }
 
@@ -270,6 +480,14 @@ function parseEventFrame(frame: string) {
     return {
       type: "indexing" as const,
       searchIndexed: parsed.searchIndexed === true,
+    };
+  }
+
+  if (event === "snippet") {
+    const parsed = JSON.parse(data) as { snippetId?: string };
+    return {
+      type: "snippet" as const,
+      snippetId: parsed.snippetId ?? "",
     };
   }
 
