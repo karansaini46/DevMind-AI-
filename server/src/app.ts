@@ -7,6 +7,9 @@ import "./config/passport";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { authRouter } from "./routes/auth";
 import { healthRouter } from "./routes/health";
+import { reviewsRouter } from "./routes/reviews";
+import { searchRouter } from "./routes/search";
+import { snippetsRouter } from "./routes/snippets";
 import { env } from "./utils/env";
 
 export const app = express();
@@ -24,6 +27,9 @@ app.use(passport.initialize());
 
 app.use("/health", healthRouter);
 app.use("/auth", authRouter);
+app.use("/reviews", reviewsRouter);
+app.use("/search", searchRouter);
+app.use("/snippets", snippetsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
