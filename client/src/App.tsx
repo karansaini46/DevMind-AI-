@@ -11,6 +11,7 @@ import { AuthSuccessPage } from "./pages/AuthSuccessPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { useAuthStore } from "./store/auth-store";
 
 const CodeReviewPage = lazy(() =>
@@ -48,6 +49,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<WorkspaceLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route
               path="/review"
               element={

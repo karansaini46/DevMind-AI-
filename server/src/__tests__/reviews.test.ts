@@ -17,6 +17,7 @@ vi.mock("../lib/prisma", () => ({
     },
     review: {
       create: vi.fn(),
+      findMany: vi.fn(),
     },
   },
 }));
@@ -33,6 +34,7 @@ vi.mock("../embeddings/service", () => ({
 
 const codeSnippetCreate = prisma.codeSnippet.create as unknown as Mock;
 const reviewCreate = prisma.review.create as unknown as Mock;
+const reviewFindMany = prisma.review.findMany as unknown as Mock;
 const createReviewMock = createReview as unknown as Mock;
 const scoreReviewMock = scoreReview as unknown as Mock;
 const streamReviewMock = streamReview as unknown as Mock;
@@ -55,6 +57,7 @@ describe("review routes", () => {
     reviewCreate.mockResolvedValue({
       id: "review-1",
     });
+    reviewFindMany.mockResolvedValue([]);
     embedAndStoreMock.mockResolvedValue(undefined);
   });
 
@@ -208,5 +211,42 @@ describe("review routes", () => {
 
     expect(response.status).toBe(201);
     expect(response.body.searchIndexed).toBe(false);
+  });
+
+  it("returns recent webhook reviews for the dashboard", async () => {
+    reviewFindMany.mockResolvedValueOnce([
+      {
+        id: "review-1",
+        snippetId: "snippet-1",
+        feedbackMarkdown: "# Review",
+        score: 8,
+        createdAt: new Date("2026-05-16T12:00:00.000Z"),
+        source: "webhook",
+        snippet: {
+          filename: "src/app.ts",
+          language: "typescript",
+        },
+      },
+    ]);
+
+    const response = await request(app)
+      .get("/reviews/auto")
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      reviews: [
+        {
+          id: "review-1",
+          snippetId: "snippet-1",
+          markdown: "# Review",
+          score: 8,
+          createdAt: "2026-05-16T12:00:00.000Z",
+          source: "webhook",
+          filename: "src/app.ts",
+          language: "typescript",
+        },
+      ],
+    });
   });
 });

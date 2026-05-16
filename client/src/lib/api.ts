@@ -33,6 +33,17 @@ export interface Snippet {
   createdAt: string;
 }
 
+export interface AutoReview {
+  id: string;
+  snippetId: string;
+  markdown: string;
+  score: number;
+  createdAt: string;
+  source: "webhook";
+  filename: string;
+  language: string;
+}
+
 export async function parseApiError(response: Response) {
   const body = (await response.json().catch(() => null)) as
     | { message?: string }

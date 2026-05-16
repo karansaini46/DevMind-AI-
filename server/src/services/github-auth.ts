@@ -27,7 +27,7 @@ export function buildGitHubAuthorizationUrl(state: string) {
   const authorizationUrl = new URL("https://github.com/login/oauth/authorize");
   authorizationUrl.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
   authorizationUrl.searchParams.set("redirect_uri", env.GITHUB_CALLBACK_URL);
-  authorizationUrl.searchParams.set("scope", "user:email");
+  authorizationUrl.searchParams.set("scope", "user:email repo admin:repo_hook");
   authorizationUrl.searchParams.set("state", state);
   return authorizationUrl.toString();
 }
