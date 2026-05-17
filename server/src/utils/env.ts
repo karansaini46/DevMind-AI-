@@ -11,7 +11,7 @@ const envSchema = z.object({
     .string()
     .url()
     .default("http://localhost:5173")
-    .transform((value) => value.replace(/\/$/, "")),
+    .transform((value) => new URL(value).origin),
   JWT_SECRET: z.string().min(1).default("development-jwt-secret"),
   JWT_ACCESS_SECRET: z.string().min(1).optional(),
   JWT_REFRESH_SECRET: z.string().min(1).optional(),
