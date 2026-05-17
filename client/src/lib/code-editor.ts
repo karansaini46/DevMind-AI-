@@ -16,6 +16,10 @@ export const languages = [
 
 export type Language = (typeof languages)[number]["value"];
 
+export function getLanguageLabel(language: string) {
+  return languages.find((option) => option.value === language)?.label ?? language;
+}
+
 export function getLanguageExtensions(language: string) {
   switch (language) {
     case "javascript":

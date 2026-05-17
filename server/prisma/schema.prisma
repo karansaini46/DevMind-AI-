@@ -39,6 +39,7 @@ model CodeSnippet {
   documentation Documentation?
 
   @@index([userId])
+  @@index([userId, language])
 }
 
 model Review {
@@ -54,6 +55,9 @@ model Review {
 
   @@index([snippetId])
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, score])
+  @@index([userId, source, createdAt])
 }
 
 model Embedding {

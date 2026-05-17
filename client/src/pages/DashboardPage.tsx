@@ -1,15 +1,67 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_URL, type AutoReview, parseApiError } from "../lib/api";
+import {
+  Cell,
+  CartesianGrid,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  API_URL,
+  parseApiError,
+  type DashboardStats,
+} from "../lib/api";
+import { getLanguageLabel } from "../lib/code-editor";
+import { authConfig, apiClient, getRequestErrorMessage } from "../lib/http";
+import {
+  formatReviewDate,
+  getScoreTone,
+  getSourceLabel,
+} from "../lib/review-display";
 import { useAuthStore } from "../store/auth-store";
+
+const chartColors = ["#3366ff", "#12b76a", "#f79009", "#7a5af8", "#f04438"];
 
 export function DashboardPage() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [autoReviews, setAutoReviews] = useState<AutoReview[]>([]);
-  const [autoReviewError, setAutoReviewError] = useState<string | null>(null);
+
+  const loadStats = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    setDashboardError(null);
+
+    try {
+      const response = await apiClient.get<DashboardStats>(
+        "/dashboard/stats",
+        authConfig(token),
+      );
+      setStats(response.data);
+    } catch (error) {
+      setDashboardError(
+        getRequestErrorMessage(error, "Unable to load dashboard"),
+      );
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     if (!token) {
@@ -18,32 +70,7 @@ export function DashboardPage() {
 
     const controller = new AbortController();
 
-    async function loadAutoReviews() {
-      try {
-        const response = await fetch(`${API_URL}/reviews/auto?limit=10`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "include",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(await parseApiError(response));
-        }
-
-        const body = (await response.json()) as { reviews: AutoReview[] };
-        setAutoReviews(body.reviews);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setAutoReviewError(
-            error instanceof Error ? error.message : "Unable to load auto-reviews",
-          );
-        }
-      }
-    }
-
-    async function subscribeToAutoReviews() {
+    async function subscribeToReviews() {
       try {
         const response = await fetch(`${API_URL}/reviews/auto/events`, {
           headers: {
@@ -54,31 +81,27 @@ export function DashboardPage() {
         });
 
         if (!response.ok || !response.body) {
-          throw new Error("Unable to subscribe to auto-reviews");
+          throw new Error("Unable to subscribe to GitHub reviews");
         }
 
-        await readAutoReviewStream(response.body, (review) => {
-          setAutoReviews((current) => [
-            review,
-            ...current.filter((item) => item.id !== review.id),
-          ].slice(0, 10));
+        await readReviewStream(response.body, () => {
+          void loadStats();
         });
       } catch (error) {
         if (!controller.signal.aborted) {
-          setAutoReviewError(
-            error instanceof Error ? error.message : "Unable to stream auto-reviews",
+          setDashboardError(
+            error instanceof Error ? error.message : "Unable to stream reviews",
           );
         }
       }
     }
 
-    void loadAutoReviews();
-    void subscribeToAutoReviews();
+    void subscribeToReviews();
 
     return () => {
       controller.abort();
     };
-  }, [token]);
+  }, [loadStats, token]);
 
   async function handleConnectGitHub() {
     if (!token) {
@@ -113,18 +136,191 @@ export function DashboardPage() {
 
   return (
     <section className="dashboard-page">
-      <section className="hero-card dashboard-card">
-        <p className="eyebrow">Workspace</p>
-        <h1>Welcome back.</h1>
-        <p className="hero-copy">
-          Your account is ready for the product layer that comes next.
-        </p>
-        <Link className="primary-link" to="/review">
+      <section className="dashboard-heading">
+        <div>
+          <p className="eyebrow">Dashboard</p>
+          <h1>Your review history at a glance.</h1>
+        </div>
+        <Link className="primary-link dashboard-action" to="/review">
           Start a code review
         </Link>
       </section>
 
-      <section className="connect-card">
+      {dashboardError ? <p className="form-error">{dashboardError}</p> : null}
+
+      <section className="stats-grid">
+        <article className="stat-card">
+          <span>Total Reviews</span>
+          <strong>{stats?.totalReviews ?? 0}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Average Score</span>
+          <div className={`score-chip ${getScoreTone(stats?.averageScore ?? 0)}`}>
+            {formatAverageScore(stats?.averageScore ?? 0)}
+          </div>
+        </article>
+        <article className="stat-card">
+          <span>Reviews This Week</span>
+          <strong>{stats?.reviewsThisWeek ?? 0}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Languages Used</span>
+          <strong>{stats?.languagesUsed ?? 0}</strong>
+        </article>
+      </section>
+
+      {isLoadingStats ? <p className="empty-review">Loading dashboard.</p> : null}
+
+      {stats && stats.totalReviews === 0 ? (
+        <section className="empty-state dashboard-empty-state">
+          <h2>No reviews yet.</h2>
+          <p>Paste your first code snippet to get started.</p>
+          <Link className="primary-link" to="/review">
+            Review your first snippet
+          </Link>
+        </section>
+      ) : null}
+
+      {stats && stats.totalReviews > 0 ? (
+        <>
+          <section className="dashboard-grid">
+            <article className="panel-card chart-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Trend</p>
+                  <h2>Average quality score</h2>
+                </div>
+              </div>
+              <div className="chart-shell">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stats.scoreOverTime}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tickFormatter={formatChartDate} />
+                    <YAxis domain={[0, 10]} allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value) => [`${value}/10`, "Average score"]}
+                      labelFormatter={(label) => formatChartDate(String(label))}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="avgScore"
+                      stroke="#3366ff"
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </article>
+
+            <article className="panel-card chart-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Languages</p>
+                  <h2>Review mix</h2>
+                </div>
+              </div>
+              <div className="donut-layout">
+                <div className="chart-shell donut-shell">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.languageBreakdown}
+                        dataKey="count"
+                        nameKey="language"
+                        innerRadius={54}
+                        outerRadius={84}
+                        paddingAngle={3}
+                      >
+                        {stats.languageBreakdown.map((entry, index) => (
+                          <Cell
+                            key={entry.language}
+                            fill={chartColors[index % chartColors.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, _name, item) => [
+                          value,
+                          getLanguageLabel(String(item.payload.language)),
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="chart-legend">
+                  {stats.languageBreakdown.map((entry, index) => (
+                    <li key={entry.language}>
+                      <span
+                        style={{
+                          backgroundColor: chartColors[index % chartColors.length],
+                        }}
+                      />
+                      {getLanguageLabel(entry.language)} ({entry.count})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          </section>
+
+          <section className="panel-card table-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Recent Reviews</p>
+                <h2>Latest feedback</h2>
+              </div>
+              <Link className="ghost-link" to="/history">
+                View all
+              </Link>
+            </div>
+            <div className="table-wrap">
+              <table className="review-table">
+                <thead>
+                  <tr>
+                    <th>Filename</th>
+                    <th>Language</th>
+                    <th>Score</th>
+                    <th>Source</th>
+                    <th>Date</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.recentReviews.map((review) => (
+                    <tr key={review.id}>
+                      <td>{review.snippet.filename}</td>
+                      <td>
+                        <span className="language-badge">
+                          {getLanguageLabel(review.snippet.language)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`score-badge ${getScoreTone(review.score)}`}>
+                          {review.score}/10
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`source-badge is-${review.source}`}>
+                          {getSourceLabel(review.source)}
+                        </span>
+                      </td>
+                      <td>{formatReviewDate(review.createdAt)}</td>
+                      <td>
+                        <Link className="ghost-link compact-link" to={`/reviews/${review.id}`}>
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      <section className="connect-card dashboard-connect-card">
         <p className="eyebrow">GitHub</p>
         {user?.githubId ? (
           <>
@@ -139,8 +335,8 @@ export function DashboardPage() {
           <>
             <h2>Connect GitHub</h2>
             <p>
-              Link the same account you use for source control so future repository
-              features have a secure foundation.
+              Link the account you use for source control so repository reviews can
+              arrive here after pushes.
             </p>
             <button
               className="primary-button"
@@ -154,47 +350,13 @@ export function DashboardPage() {
           </>
         )}
       </section>
-
-      <section className="auto-reviews-card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Recent Auto-Reviews</p>
-            <h2>Reviews from repository pushes</h2>
-          </div>
-        </div>
-
-        {autoReviewError ? <p className="form-error">{autoReviewError}</p> : null}
-
-        {autoReviews.length ? (
-          <div className="auto-review-list">
-            {autoReviews.map((review) => (
-              <Link
-                className="auto-review-item"
-                key={review.id}
-                to={`/snippets/${review.snippetId}`}
-              >
-                <div>
-                  <strong>{review.filename}</strong>
-                  <span>{review.language}</span>
-                </div>
-                <p>{toReviewExcerpt(review.markdown)}</p>
-                <span>Score {review.score}/10</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="empty-review">
-            Push code to a connected repository and new reviews will appear here.
-          </p>
-        )}
-      </section>
     </section>
   );
 }
 
-async function readAutoReviewStream(
+async function readReviewStream(
   body: ReadableStream<Uint8Array>,
-  onReview: (review: AutoReview) => void,
+  onReview: () => void,
 ) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -212,16 +374,16 @@ async function readAutoReviewStream(
     buffer = frames.pop() ?? "";
 
     for (const frame of frames) {
-      const event = parseAutoReviewEvent(frame);
+      const hasReview = parseReviewEvent(frame);
 
-      if (event) {
-        onReview(event);
+      if (hasReview) {
+        onReview();
       }
     }
   }
 }
 
-function parseAutoReviewEvent(frame: string) {
+function parseReviewEvent(frame: string) {
   const lines = frame.split(/\r?\n/);
   const event = lines
     .find((line) => line.startsWith("event:"))
@@ -236,11 +398,18 @@ function parseAutoReviewEvent(frame: string) {
     return null;
   }
 
-  return JSON.parse(data) as AutoReview;
+  JSON.parse(data);
+  return true;
 }
 
-function toReviewExcerpt(markdown: string) {
-  const compact = markdown.replace(/\s+/g, " ").trim();
+function formatAverageScore(score: number) {
+  return `${score.toFixed(1)}/10`;
+}
 
-  return compact.length > 160 ? `${compact.slice(0, 157)}...` : compact;
+function formatChartDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00.000Z`));
 }

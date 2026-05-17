@@ -246,6 +246,218 @@ h2 {
   gap: 1.5rem;
 }
 
+.dashboard-heading,
+.page-heading,
+.review-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-heading h1,
+.page-heading h1,
+.review-detail-header h1 {
+  margin-bottom: 0;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.dashboard-action {
+  margin-top: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stat-card,
+.panel-card {
+  border: 1px solid rgba(24, 33, 47, 0.08);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1.5rem 3rem rgba(24, 33, 47, 0.08);
+}
+
+.stat-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1.25rem;
+}
+
+.stat-card span {
+  color: #53657f;
+  font-size: 0.9rem;
+}
+
+.stat-card strong {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.score-chip,
+.score-badge,
+.source-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-weight: 700;
+}
+
+.score-chip {
+  font-size: 1rem;
+}
+
+.score-chip.is-good,
+.score-badge.is-good,
+.score-ring.is-good {
+  color: #067647;
+}
+
+.score-chip.is-good,
+.score-badge.is-good {
+  background: rgba(18, 183, 106, 0.14);
+}
+
+.score-chip.is-mid,
+.score-badge.is-mid,
+.score-ring.is-mid {
+  color: #b54708;
+}
+
+.score-chip.is-mid,
+.score-badge.is-mid {
+  background: rgba(247, 144, 9, 0.16);
+}
+
+.score-chip.is-low,
+.score-badge.is-low,
+.score-ring.is-low {
+  color: #b42318;
+}
+
+.score-chip.is-low,
+.score-badge.is-low {
+  background: rgba(240, 68, 56, 0.14);
+}
+
+.dashboard-empty-state {
+  justify-items: start;
+}
+
+.dashboard-empty-state .primary-link {
+  margin-top: 0.5rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 1fr);
+  gap: 1rem;
+}
+
+.chart-card,
+.table-card,
+.detail-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.chart-shell {
+  min-height: 18rem;
+}
+
+.donut-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.donut-shell {
+  min-height: 14rem;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #53657f;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-legend span {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.review-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.review-table th,
+.review-table td {
+  border-bottom: 1px solid rgba(24, 33, 47, 0.08);
+  padding: 0.9rem 0.7rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.review-table th {
+  color: #53657f;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.source-badge {
+  font-size: 0.8rem;
+}
+
+.source-badge.is-manual {
+  color: #344054;
+  background: rgba(24, 33, 47, 0.08);
+}
+
+.source-badge.is-webhook {
+  color: #2447b8;
+  background: rgba(51, 102, 255, 0.12);
+}
+
+.compact-link {
+  display: inline-flex;
+  padding: 0.45rem 0.75rem;
+}
+
+.dashboard-connect-card {
+  width: min(100%, 38rem);
+}
+
 .navbar {
   display: flex;
   align-items: center;
@@ -379,6 +591,119 @@ h2 {
   display: grid;
   align-content: start;
   gap: 1.5rem;
+}
+
+.history-page,
+.review-detail-page {
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+}
+
+.filter-card {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+
+.filter-card label {
+  display: grid;
+  gap: 0.35rem;
+  color: #263247;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.filter-card input,
+.filter-card select {
+  width: 100%;
+  border: 1px solid rgba(24, 33, 47, 0.14);
+  border-radius: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  background: #fff;
+}
+
+.row-actions,
+.pagination,
+.review-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.pagination {
+  justify-content: flex-end;
+}
+
+.review-detail-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.score-ring {
+  position: relative;
+  display: grid;
+  width: 6.5rem;
+  height: 6.5rem;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, #fff 56%, transparent 57%),
+    conic-gradient(currentColor var(--score-angle), rgba(24, 33, 47, 0.08) 0);
+}
+
+.score-ring strong {
+  color: #18212f;
+  font-size: 1.25rem;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.metadata-grid div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metadata-grid dt {
+  color: #667085;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.metadata-grid dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.danger-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  color: #b42318;
+  background: rgba(240, 68, 56, 0.14);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.danger-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.review-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .review-grid {
@@ -663,7 +988,7 @@ h2 {
   }
 
   .workspace-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workspace-link {
@@ -677,7 +1002,14 @@ h2 {
   }
 
   .review-grid,
-  .review-fields {
+  .review-fields,
+  .stats-grid,
+  .dashboard-grid,
+  .filter-card,
+  .review-detail-grid,
+  .metadata-grid,
+  .review-detail-summary,
+  .donut-layout {
     grid-template-columns: 1fr;
   }
 
@@ -685,7 +1017,16 @@ h2 {
   .review-output-header,
   .search-form,
   .search-result-header,
-  .snippet-header {
+  .snippet-header,
+  .dashboard-heading,
+  .page-heading,
+  .review-detail-header,
+  .section-heading {
     flex-direction: column;
+  }
+
+  .review-detail-actions,
+  .pagination {
+    justify-content: flex-start;
   }
 }

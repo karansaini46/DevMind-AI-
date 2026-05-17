@@ -18,6 +18,9 @@ vi.mock("../lib/prisma", () => ({
     review: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
     },
   },
 }));
@@ -35,6 +38,9 @@ vi.mock("../embeddings/service", () => ({
 const codeSnippetCreate = prisma.codeSnippet.create as unknown as Mock;
 const reviewCreate = prisma.review.create as unknown as Mock;
 const reviewFindMany = prisma.review.findMany as unknown as Mock;
+const reviewFindFirst = prisma.review.findFirst as unknown as Mock;
+const reviewCount = prisma.review.count as unknown as Mock;
+const reviewDeleteMany = prisma.review.deleteMany as unknown as Mock;
 const createReviewMock = createReview as unknown as Mock;
 const scoreReviewMock = scoreReview as unknown as Mock;
 const streamReviewMock = streamReview as unknown as Mock;
@@ -58,6 +64,11 @@ describe("review routes", () => {
       id: "review-1",
     });
     reviewFindMany.mockResolvedValue([]);
+    reviewFindFirst.mockResolvedValue(null);
+    reviewCount.mockResolvedValue(0);
+    reviewDeleteMany.mockResolvedValue({
+      count: 0,
+    });
     embedAndStoreMock.mockResolvedValue(undefined);
   });
 
@@ -251,4 +262,137 @@ describe("review routes", () => {
       ],
     });
   });
+
+  it("returns paginated review history with filtered previews", async () => {
+    reviewFindMany.mockResolvedValueOnce([
+      {
+        id: "review-2",
+        score: 7,
+        createdAt: new Date("2026-05-15T12:00:00.000Z"),
+        source: "manual",
+        snippet: {
+          id: "snippet-2",
+          filename: "sample.ts",
+          language: "typescript",
+          rawCode: "x".repeat(220),
+        },
+      },
+    ]);
+    reviewCount.mockResolvedValueOnce(21);
+
+    const response = await request(app)
+      .get(
+        "/reviews?page=2&limit=20&language=typescript&source=manual&sortBy=score&order=asc&from=2026-05-01&to=2026-05-16",
+      )
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(reviewFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 20,
+        take: 20,
+        where: expect.objectContaining({
+          userId: "user-1",
+          source: "manual",
+          snippet: {
+            language: "typescript",
+          },
+        }),
+      }),
+    );
+    expect(response.body).toEqual({
+      reviews: [
+        {
+          id: "review-2",
+          score: 7,
+          createdAt: "2026-05-15T12:00:00.000Z",
+          source: "manual",
+          snippet: {
+            id: "snippet-2",
+            filename: "sample.ts",
+            language: "typescript",
+            rawCode: "x".repeat(200),
+          },
+        },
+      ],
+      total: 21,
+      page: 2,
+      totalPages: 2,
+    });
+  });
+
+  it("returns a full owned review", async () => {
+    reviewFindFirst.mockResolvedValueOnce(buildStoredReview());
+
+    const response = await request(app)
+      .get(`/reviews/${reviewId()}`)
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.review.feedbackMarkdown).toBe("# Review");
+    expect(response.body.review.snippet.rawCode).toBe("const value = 1;");
+  });
+
+  it("creates a fresh review on the existing snippet", async () => {
+    reviewFindFirst.mockResolvedValueOnce(buildStoredReview());
+    createReviewMock.mockResolvedValueOnce("# Fresh review");
+    scoreReviewMock.mockResolvedValueOnce(9);
+    reviewCreate.mockResolvedValueOnce({
+      id: "review-2",
+    });
+
+    const response = await request(app)
+      .post(`/reviews/${reviewId()}/re-review`)
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(201);
+    expect(reviewCreate).toHaveBeenCalledWith({
+      data: {
+        snippetId: "snippet-1",
+        userId: "user-1",
+        feedbackMarkdown: "# Fresh review",
+        score: 9,
+      },
+    });
+    expect(response.body.reviewId).toBe("review-2");
+  });
+
+  it("deletes one owned review", async () => {
+    reviewDeleteMany.mockResolvedValueOnce({
+      count: 1,
+    });
+
+    const response = await request(app)
+      .delete(`/reviews/${reviewId()}`)
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(204);
+    expect(reviewDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: reviewId(),
+        userId: "user-1",
+      },
+    });
+  });
 });
+
+function buildStoredReview() {
+  return {
+    id: reviewId(),
+    score: 8,
+    createdAt: new Date("2026-05-16T12:00:00.000Z"),
+    source: "manual",
+    feedbackMarkdown: "# Review",
+    snippet: {
+      id: "snippet-1",
+      filename: "sample.ts",
+      language: "typescript",
+      rawCode: "const value = 1;",
+      createdAt: new Date("2026-05-16T11:00:00.000Z"),
+    },
+  };
+}
+
+function reviewId() {
+  return "3ec14e2a-c36f-48a5-8ff9-a6a6f4f1553e";
+}

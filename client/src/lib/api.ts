@@ -44,6 +44,66 @@ export interface AutoReview {
   language: string;
 }
 
+export type ReviewSource = "manual" | "webhook";
+
+export interface ReviewSnippetPreview {
+  id: string;
+  filename: string;
+  language: string;
+  rawCode: string;
+}
+
+export interface ReviewSummary {
+  id: string;
+  score: number;
+  createdAt: string;
+  source: ReviewSource;
+  snippet: ReviewSnippetPreview;
+}
+
+export interface ReviewListResponse {
+  reviews: ReviewSummary[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface ReviewDetail {
+  id: string;
+  score: number;
+  createdAt: string;
+  source: ReviewSource;
+  feedbackMarkdown: string;
+  snippet: Snippet;
+}
+
+export interface ReviewDetailResponse {
+  review: ReviewDetail;
+}
+
+export interface DashboardStats {
+  totalReviews: number;
+  averageScore: number;
+  languagesUsed: number;
+  languageBreakdown: Array<{
+    language: string;
+    count: number;
+  }>;
+  reviewsThisWeek: number;
+  scoreOverTime: Array<{
+    date: string;
+    avgScore: number;
+  }>;
+  recentReviews: ReviewSummary[];
+}
+
+export interface ReReviewResponse {
+  reviewId: string;
+  snippetId: string;
+  markdown: string;
+  score: number;
+}
+
 export interface Documentation {
   id: string;
   snippetId: string;

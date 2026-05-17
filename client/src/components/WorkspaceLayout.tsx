@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/auth-store";
 const navigation = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/review", label: "Review" },
+  { to: "/history", label: "History" },
   { to: "/search", label: "Search" },
   { to: "/settings", label: "Settings" },
 ] as const;
