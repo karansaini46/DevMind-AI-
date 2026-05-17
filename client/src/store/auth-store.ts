@@ -7,6 +7,8 @@ import {
   parseApiError,
 } from "../lib/api";
 
+const AUTH_REQUEST_TIMEOUT_MS = 10_000;
+
 interface LoginInput {
   email: string;
   password: string;
@@ -71,7 +73,7 @@ export const useAuthStore = create<AuthState>()(
         setAuthenticatedSession(set, session);
       },
       async acceptToken(token) {
-        const response = await fetch(`${API_URL}/auth/me`, {
+        const response = await fetchWithTimeout(`${API_URL}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -93,52 +95,54 @@ export const useAuthStore = create<AuthState>()(
       async initialize() {
         const { token } = get();
 
-        if (token) {
-          try {
-            await get().acceptToken(token);
-            return;
-          } catch {
-            // Fall through to refresh-cookie recovery.
+        try {
+          if (token) {
+            try {
+              await get().acceptToken(token);
+              return;
+            } catch {
+              // Fall through to refresh-cookie recovery.
+            }
           }
-        }
 
-        const refreshed = await get().refreshSession();
+          const refreshed = await get().refreshSession();
 
-        if (!refreshed) {
-          set({
-            user: null,
-            token: null,
-            isAuthenticated: false,
-            initialized: true,
-          });
+          if (!refreshed) {
+            setLoggedOutSession(set);
+          }
+        } catch {
+          // A failed startup request must still finish initialization;
+          // otherwise the router remains trapped on its loading screen.
+          setLoggedOutSession(set);
         }
       },
       async refreshSession() {
-        const response = await fetch(`${API_URL}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
+        try {
+          const response = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
+            method: "POST",
+            credentials: "include",
+          });
 
-        if (!response.ok) {
+          if (!response.ok) {
+            return false;
+          }
+
+          const session = (await response.json()) as AuthResponse;
+          setAuthenticatedSession(set, session);
+          return true;
+        } catch {
           return false;
         }
-
-        const session = (await response.json()) as AuthResponse;
-        setAuthenticatedSession(set, session);
-        return true;
       },
       async logout() {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          credentials: "include",
-        });
-
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          initialized: true,
-        });
+        try {
+          await fetch(`${API_URL}/auth/logout`, {
+            method: "POST",
+            credentials: "include",
+          });
+        } finally {
+          setLoggedOutSession(set);
+        }
       },
     }),
     {
@@ -168,4 +172,39 @@ function setAuthenticatedSession(
     isAuthenticated: true,
     initialized: true,
   });
+}
+
+function setLoggedOutSession(
+  set: (
+    partial:
+      | AuthState
+      | Partial<AuthState>
+      | ((state: AuthState) => AuthState | Partial<AuthState>),
+    replace?: false,
+  ) => void,
+) {
+  set({
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    initialized: true,
+  });
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  timeoutMs = AUTH_REQUEST_TIMEOUT_MS,
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
