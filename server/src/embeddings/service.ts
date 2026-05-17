@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/app-error";
 import { env } from "../utils/env";
@@ -7,8 +6,17 @@ import { env } from "../utils/env";
 const chunkSize = 500;
 const chunkOverlap = 50;
 const embeddingDimensions = 768;
+const embeddingModel = "gemini-embedding-001";
+const embeddingEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent`;
 
-let embeddingClient: GoogleGenerativeAIEmbeddings | null = null;
+interface GeminiEmbeddingResponse {
+  embedding?: {
+    values?: number[];
+  };
+  error?: {
+    message?: string;
+  };
+}
 
 export function chunkCode(code: string) {
   if (!code) {
@@ -33,7 +41,29 @@ export function chunkCode(code: string) {
 }
 
 export async function embedQuery(content: string) {
-  const vector = await getEmbeddingClient().embedQuery(content);
+  const response = await fetch(embeddingEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": getGeminiApiKey(),
+    },
+    body: JSON.stringify({
+      content: {
+        parts: [{ text: content }],
+      },
+      outputDimensionality: embeddingDimensions,
+    }),
+  });
+  const payload = (await response.json()) as GeminiEmbeddingResponse;
+
+  if (!response.ok) {
+    throw buildEmbeddingError(
+      response.status,
+      payload.error?.message ?? "Gemini embedding request failed",
+    );
+  }
+
+  const vector = payload.embedding?.values ?? [];
 
   if (vector.length !== embeddingDimensions) {
     throw new Error(`Expected ${embeddingDimensions} embedding values`);
@@ -58,15 +88,19 @@ export async function embedAndStore(snippetId: string, code: string) {
   }
 }
 
-function getEmbeddingClient() {
+function getGeminiApiKey() {
   if (!env.GEMINI_API_KEY) {
     throw new AppError("Embedding service is not configured", 503);
   }
 
-  embeddingClient ??= new GoogleGenerativeAIEmbeddings({
-    model: "text-embedding-004",
-    apiKey: env.GEMINI_API_KEY,
-  });
+  return env.GEMINI_API_KEY;
+}
 
-  return embeddingClient;
+function buildEmbeddingError(status: number, message: string) {
+  const error = new Error(message) as Error & {
+    status?: number;
+  };
+
+  error.status = status;
+  return error;
 }
