@@ -4,6 +4,7 @@ import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
 
 export const languages = [
+  { value: "auto", label: "Auto detect" },
   { value: "javascript", label: "JavaScript" },
   { value: "typescript", label: "TypeScript" },
   { value: "python", label: "Python" },
@@ -31,4 +32,34 @@ export function getLanguageExtensions(language: string) {
     default:
       return [];
   }
+}
+
+export function getEditorLanguage(language: Language, filename: string) {
+  if (language !== "auto") {
+    return language;
+  }
+
+  const lowerCaseName = filename.toLowerCase();
+
+  if (/\.tsx?$/.test(lowerCaseName)) {
+    return "typescript";
+  }
+
+  if (/\.(jsx?|mjs|cjs)$/.test(lowerCaseName)) {
+    return "javascript";
+  }
+
+  if (/\.py$/.test(lowerCaseName)) {
+    return "python";
+  }
+
+  if (/\.go$/.test(lowerCaseName)) {
+    return "go";
+  }
+
+  if (/\.rs$/.test(lowerCaseName)) {
+    return "rust";
+  }
+
+  return "typescript";
 }

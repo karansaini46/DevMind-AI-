@@ -46,6 +46,14 @@ model Review {
   userId           String      @db.Uuid
   feedbackMarkdown String
   score            Int
+  structuredFeedback Json?
+  demoScore        Float?
+  productionScore  Float?
+  confidenceLevel  String?
+  mode             String?
+  inputTokens      Int?
+  outputTokens     Int?
+  totalTokens      Int?
   source           String      @default("manual")
   createdAt        DateTime    @default(now())
   snippet          CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
