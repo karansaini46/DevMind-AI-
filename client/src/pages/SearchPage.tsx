@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import {
-  API_URL,
-  parseApiError,
-  type SearchResult,
-} from "../lib/api";
+import { EmptyState } from "../components/EmptyState";
+import { API_URL, parseApiError, type SearchResult } from "../lib/api";
 import { useAuthStore } from "../store/auth-store";
 
 export function SearchPage() {
@@ -33,15 +30,10 @@ export function SearchPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        `${API_URL}/search?q=${encodeURIComponent(query.trim())}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error(await parseApiError(response));
@@ -51,9 +43,7 @@ export function SearchPage() {
       setResults(body.results);
     } catch (caughtError) {
       setResults([]);
-      setError(
-        caughtError instanceof Error ? caughtError.message : "Unable to search snippets",
-      );
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to search snippets");
     } finally {
       setIsLoading(false);
     }
@@ -61,23 +51,25 @@ export function SearchPage() {
 
   return (
     <section className="search-page">
-      <div className="search-card">
-        <p className="eyebrow">Search</p>
-        <h1>Find code by meaning.</h1>
+      <section className="page-heading search-hero">
+        <p className="eyebrow">Reviewed Code Search</p>
+        <h1>Find judged code paths.</h1>
         <form className="search-form" onSubmit={(event) => void handleSubmit(event)}>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search your code by meaning... e.g. 'error handling middleware'"
+            placeholder="error handling middleware"
           />
           <button className="primary-button" type="submit" disabled={isLoading}>
-            {isLoading ? "Searching..." : "Search"}
+            {isLoading ? "Searching..." : "Search judged code"}
           </button>
         </form>
         {error ? <p className="form-error">{error}</p> : null}
-      </div>
+      </section>
 
-      {results.length > 0 ? (
+      {isLoading ? <div className="skeleton-stack" aria-label="Loading search results" /> : null}
+
+      {results.length ? (
         <div className="search-results">
           {results.map((result) => (
             <Link className="search-result-card" key={result.id} to={`/snippets/${result.id}`}>
@@ -88,16 +80,21 @@ export function SearchPage() {
                 </div>
                 <strong>{formatScore(result.distance)}</strong>
               </div>
-
               <pre className="search-preview">{result.content}</pre>
             </Link>
           ))}
         </div>
       ) : hasSearched && !isLoading && !error ? (
-        <section className="empty-state">
-          <h2>No matching code found.</h2>
-          <p>Try reviewing some code first.</p>
-        </section>
+        <EmptyState
+          title="No reviewed code matches that search."
+          body="Try a broader phrase, or review the code path first."
+        />
+      ) : !hasSearched ? (
+        <EmptyState
+          eyebrow="Search"
+          title="Search what has already been judged."
+          body="Find code by behavior, failure path, or domain language."
+        />
       ) : null}
     </section>
   );

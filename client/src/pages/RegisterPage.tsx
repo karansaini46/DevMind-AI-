@@ -21,23 +21,21 @@ export function RegisterPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<RegisterValues>({
-    resolver: zodResolver(registerSchema),
-  });
+  } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) });
 
   async function onSubmit(values: RegisterValues) {
     try {
       await registerAccount(values);
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
+      navigate("/onboarding", { replace: true });
+    } catch (caughtError) {
       setError("root", {
-        message: error instanceof Error ? error.message : "Unable to create account",
+        message: caughtError instanceof Error ? caughtError.message : "Unable to create account",
       });
     }
   }
 
   return (
-    <main className="app-shell">
+    <main className="auth-shell">
       <section className="auth-card">
         <p className="eyebrow">DevMind</p>
         <h1>Create account</h1>
@@ -58,15 +56,9 @@ export function RegisterPage() {
 
           <label>
             Password
-            <input
-              type="password"
-              autoComplete="new-password"
-              {...register("password")}
-            />
+            <input type="password" autoComplete="new-password" {...register("password")} />
           </label>
-          {errors.password ? (
-            <p className="form-error">{errors.password.message}</p>
-          ) : null}
+          {errors.password ? <p className="form-error">{errors.password.message}</p> : null}
 
           {errors.root ? <p className="form-error">{errors.root.message}</p> : null}
 
