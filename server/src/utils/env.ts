@@ -7,7 +7,11 @@ config({ path: "../.env", override: false });
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
-  CLIENT_URL: z.string().url().default("http://localhost:5173"),
+  CLIENT_URL: z
+    .string()
+    .url()
+    .default("http://localhost:5173")
+    .transform((value) => new URL(value).origin),
   JWT_SECRET: z.string().min(1).default("development-jwt-secret"),
   JWT_ACCESS_SECRET: z.string().min(1).optional(),
   JWT_REFRESH_SECRET: z.string().min(1).optional(),
