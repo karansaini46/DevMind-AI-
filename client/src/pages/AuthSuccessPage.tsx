@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { hasCompletedOnboarding } from "../lib/onboarding";
 import { useAuthStore } from "../store/auth-store";
 
 export function AuthSuccessPage() {
@@ -16,7 +17,7 @@ export function AuthSuccessPage() {
     }
 
     void acceptToken(token)
-      .then(() => navigate("/dashboard", { replace: true }))
+      .then(() => navigate(hasCompletedOnboarding() ? "/dashboard" : "/onboarding", { replace: true }))
       .catch(() => navigate("/login", { replace: true }));
   }, [acceptToken, navigate, searchParams]);
 

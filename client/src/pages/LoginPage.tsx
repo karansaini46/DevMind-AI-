@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { API_URL } from "../lib/api";
+import { hasCompletedOnboarding } from "../lib/onboarding";
 import { useAuthStore } from "../store/auth-store";
 
 const loginSchema = z.object({
@@ -23,30 +24,27 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
 
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from
-    ?.pathname;
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   async function onSubmit(values: LoginValues) {
     try {
       await login(values);
-      navigate(from ?? "/dashboard", { replace: true });
-    } catch (error) {
+      navigate(from ?? (hasCompletedOnboarding() ? "/dashboard" : "/onboarding"), { replace: true });
+    } catch (caughtError) {
       setError("root", {
-        message: error instanceof Error ? error.message : "Unable to sign in",
+        message: caughtError instanceof Error ? caughtError.message : "Unable to sign in",
       });
     }
   }
 
   return (
-    <main className="app-shell">
+    <main className="auth-shell">
       <section className="auth-card">
         <p className="eyebrow">DevMind</p>
         <h1>Sign in</h1>
-        <p className="hero-copy">Access your workspace with your account.</p>
+        <p className="hero-copy">Return to the cockpit.</p>
 
         <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
           <label>
@@ -57,15 +55,9 @@ export function LoginPage() {
 
           <label>
             Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
+            <input type="password" autoComplete="current-password" {...register("password")} />
           </label>
-          {errors.password ? (
-            <p className="form-error">{errors.password.message}</p>
-          ) : null}
+          {errors.password ? <p className="form-error">{errors.password.message}</p> : null}
 
           {errors.root ? <p className="form-error">{errors.root.message}</p> : null}
           {oauthError ? <p className="form-error">{oauthError}</p> : null}
