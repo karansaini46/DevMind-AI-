@@ -86,14 +86,14 @@ export function SearchPage() {
         </div>
       ) : hasSearched && !isLoading && !error ? (
         <EmptyState
-          title="No matching code found."
-          body="Try a broader phrase, or review more snippets first."
+          title="No reviewed code matches that search."
+          body="Try a broader phrase, or review the code path first."
         />
       ) : !hasSearched ? (
         <EmptyState
           eyebrow="Search"
-          title="Ask for the code you remember, not the filename you forgot."
-          body="Search by behavior, failure path, or domain language."
+          title="Search what has already been judged."
+          body="Find code by behavior, failure path, or domain language."
         />
       ) : null}
     </section>

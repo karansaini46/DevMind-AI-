@@ -1,6 +1,7 @@
 import type { BugFinding, ReviewFinding, ReviewResult, Severity } from "./api";
 
-export type Verdict = "Ship It" | "Fix First" | "Risky" | "Do Not Ship";
+export type Verdict = "Safe to Ship" | "Fix First" | "Risky" | "Do Not Ship";
+export type RiskLevel = "Stable" | "Warning" | "Risky" | "Critical";
 export type SeverityGroup = "Critical" | "Major" | "Minor" | "Suggestions";
 
 export interface DisplayIssue {
@@ -34,7 +35,7 @@ export function toProductionScore(value: number) {
 
 export function getVerdict(score: number): Verdict {
   if (score >= 85) {
-    return "Ship It";
+    return "Safe to Ship";
   }
 
   if (score >= 70) {
@@ -46,6 +47,26 @@ export function getVerdict(score: number): Verdict {
   }
 
   return "Do Not Ship";
+}
+
+export function getRiskLevel(score: number): RiskLevel {
+  if (score >= 85) {
+    return "Stable";
+  }
+
+  if (score >= 70) {
+    return "Warning";
+  }
+
+  if (score >= 50) {
+    return "Risky";
+  }
+
+  return "Critical";
+}
+
+export function getStoredProductionScore(value: number | null, fallback: number) {
+  return Math.round((value ?? fallback) * 10);
 }
 
 export function getSeverityGroup(severity: Severity): SeverityGroup {

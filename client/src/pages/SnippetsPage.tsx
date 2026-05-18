@@ -103,8 +103,8 @@ export function SnippetsPage() {
       ) : !isLoading ? (
         <EmptyState
           eyebrow="No snippets"
-          title="Nothing saved yet."
-          body="Finish a review and the snippet will land here automatically."
+          title="Nothing reviewed. Nothing trusted."
+          body="Finish one review and the snippet trail starts here."
           action={
             <Link className="primary-link" to="/review">
               Start a review

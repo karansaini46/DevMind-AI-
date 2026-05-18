@@ -159,8 +159,8 @@ export function GitHubPage() {
       {!user?.githubId ? (
         <EmptyState
           eyebrow="Not connected"
-          title="Connect GitHub before repository monitoring can begin."
-          body="DevMind asks for the account link first, then lets you choose the repository you want reviewed."
+          title="Connect GitHub before production finds the problem first."
+          body="Link the account first, then choose the repository worth watching."
           action={
             <button className="primary-button danger-button" type="button" onClick={() => void handleConnectGitHub()} disabled={isConnecting}>
               {isConnecting ? "Connecting..." : "Connect GitHub"}

@@ -7,7 +7,7 @@ export function ProductionScoreCard({ score }: { score: number }) {
 
   return (
     <section className="production-score-card">
-      <p className="eyebrow">Production Score</p>
+      <p className="eyebrow">Production Risk</p>
       <div>
         <strong>{productionScore}</strong>
         <span>/100</span>
