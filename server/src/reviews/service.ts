@@ -58,6 +58,10 @@ export async function createCompletedReview(input: ReviewInput) {
       throw new AppError("Too many requests, wait a moment", 429);
     }
 
+    if (isServiceUnavailableError(error)) {
+      throw new AppError("Review service is temporarily unavailable, try again shortly", 503);
+    }
+
     throw error;
   }
 }
@@ -90,5 +94,26 @@ export function isRateLimitError(error: unknown) {
     candidate.response?.status === 429 ||
     candidate.message?.includes("429") === true ||
     candidate.message?.includes("RESOURCE_EXHAUSTED") === true
+  );
+}
+
+export function isServiceUnavailableError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as {
+    status?: number;
+    statusCode?: number;
+    message?: string;
+    response?: { status?: number };
+  };
+
+  return (
+    candidate.status === 503 ||
+    candidate.statusCode === 503 ||
+    candidate.response?.status === 503 ||
+    candidate.message?.includes("high demand") === true ||
+    candidate.message?.includes("UNAVAILABLE") === true
   );
 }
