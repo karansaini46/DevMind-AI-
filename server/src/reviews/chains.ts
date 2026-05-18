@@ -27,6 +27,7 @@ export interface ReviewInput {
 export async function createStructuredReview(input: ReviewInput) {
   const structuredModel = getReviewModel().withStructuredOutput(reviewResultSchema, {
     includeRaw: true,
+    method: "jsonSchema",
   });
   const result = await structuredModel.invoke([
     new SystemMessage(buildReviewSystemPrompt(input)),

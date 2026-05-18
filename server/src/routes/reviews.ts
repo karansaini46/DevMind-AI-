@@ -15,6 +15,7 @@ import {
   createStoredReview,
   indexSnippet,
   isRateLimitError,
+  isServiceUnavailableError,
 } from "../reviews/service";
 import { subscribeToAutoReviews } from "../services/review-events";
 import { asyncHandler } from "../utils/async-handler";
@@ -316,9 +317,15 @@ function writeEvent(
 }
 
 function toClientMessage(error: unknown) {
-  return isRateLimitError(error)
-    ? "Too many requests, wait a moment"
-    : "Unable to complete the review";
+  if (isRateLimitError(error)) {
+    return "Too many requests, wait a moment";
+  }
+
+  if (isServiceUnavailableError(error)) {
+    return "Review service is temporarily unavailable, try again shortly";
+  }
+
+  return "Unable to complete the review";
 }
 
 function toAutoReviewResponse(review: {

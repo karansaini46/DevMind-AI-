@@ -181,6 +181,26 @@ describe("review routes", () => {
     expect(reviewCreate).not.toHaveBeenCalled();
   });
 
+  it("returns a friendly response when the provider is temporarily unavailable", async () => {
+    createStructuredReviewMock.mockRejectedValue({
+      statusCode: 503,
+    });
+
+    const response = await request(app)
+      .post("/reviews")
+      .set("Authorization", `Bearer ${buildToken()}`)
+      .send({
+        code: "const value = 1;",
+        language: "javascript",
+      });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      message: "Review service is temporarily unavailable, try again shortly",
+    });
+    expect(reviewCreate).not.toHaveBeenCalled();
+  });
+
   it("keeps a completed review when indexing fails", async () => {
     embedAndStoreMock.mockRejectedValueOnce(new Error("provider unavailable"));
 
