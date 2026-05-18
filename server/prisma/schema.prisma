@@ -10,15 +10,20 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  passwordHash String
-  name         String
-  githubId     String?       @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  snippets     CodeSnippet[]
-  reviews      Review[]
+  id                String        @id @default(uuid()) @db.Uuid
+  email             String?       @unique
+  passwordHash      String?
+  name              String
+  githubId          String?       @unique
+  githubAccessToken String?
+  githubUsername    String?
+  githubAvatarUrl   String?
+  connectedRepo     String?
+  webhookId         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  snippets          CodeSnippet[]
+  reviews           Review[]
 }
 
 model CodeSnippet {
@@ -41,6 +46,7 @@ model Review {
   userId           String      @db.Uuid
   feedbackMarkdown String
   score            Int
+  source           String      @default("manual")
   createdAt        DateTime    @default(now())
   snippet          CodeSnippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
   user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)

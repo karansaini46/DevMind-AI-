@@ -1,25 +1,25 @@
-import cors from "cors";
-import express from "express";
-import helmet from "helmet";
-import { errorHandler, notFoundHandler } from "./middleware/error-handler";
-import { healthRouter } from "./routes/health";
+import { app } from "./app";
+import { closeReviewQueue } from "./jobs/reviewQueue";
+import { closeReviewWorker, startReviewWorker } from "./jobs/reviewWorker";
 import { env } from "./utils/env";
 
-const app = express();
+startReviewWorker();
 
-app.use(helmet());
-app.use(
-  cors({
-    origin: env.CLIENT_URL,
-  }),
-);
-app.use(express.json({ limit: "1mb" }));
-
-app.use("/health", healthRouter);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   console.log(`Server listening on port ${env.PORT}`);
+});
+
+async function shutdown() {
+  await Promise.all([closeReviewWorker(), closeReviewQueue()]);
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on("SIGINT", () => {
+  void shutdown();
+});
+
+process.on("SIGTERM", () => {
+  void shutdown();
 });
