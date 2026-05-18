@@ -1,21 +1,21 @@
 const rows = [
-  { generic: "Open chat box", product: "Review cockpit" },
-  { generic: "Loose paragraphs", product: "Severity-ranked findings" },
-  { generic: "Feels agreeable", product: "Gives a verdict" },
-  { generic: "Hard to revisit", product: "Saved reports and snippets" },
+  { generic: "Loose response", product: "Senior verdict" },
+  { generic: "Mixed advice", product: "Severity-ranked findings" },
+  { generic: "Maybe this helps", product: "Fix before ship" },
+  { generic: "Hard to revisit", product: "Saved review report" },
 ];
 
 export function ComparisonSection() {
   return (
     <section className="landing-section comparison-section">
       <div>
-        <p className="eyebrow">Difference</p>
-        <h2>Generic chat vs DevMind</h2>
+        <p className="eyebrow">Generic chat vs DevMind report</p>
+        <h2>One talks. One reviews.</h2>
       </div>
       <div className="comparison-table">
         <div>
           <strong>Generic chat</strong>
-          <strong>DevMind</strong>
+          <strong>DevMind report</strong>
         </div>
         {rows.map((row) => (
           <div key={row.generic}>

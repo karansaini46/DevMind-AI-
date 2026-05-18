@@ -8,13 +8,6 @@ import { RecentReviewCard } from "../RecentReviewCard";
 import { CodeInputPanel } from "./CodeInputPanel";
 import { RiskMeter } from "./RiskMeter";
 
-const inputModes = [
-  { label: "Paste Code", available: true },
-  { label: "GitHub PR", available: false },
-  { label: "Repository Scan", available: false },
-  { label: "Saved Snippet", available: false },
-] as const;
-
 export function ReviewCockpit({
   code,
   filename,
@@ -57,26 +50,27 @@ export function ReviewCockpit({
       <div className="cockpit-heading">
         <div>
           <p className="eyebrow">Review Cockpit</p>
-          <h1>What are we reviewing today?</h1>
-          <p>This code compiles. That does not mean it survives production.</p>
+          <h1>Paste code. Get the senior verdict.</h1>
+          <p>This compiles. That does not mean it survives.</p>
         </div>
 
-        <div className="input-mode-switcher" role="tablist" aria-label="Input mode">
-          {inputModes.map((inputMode) => (
-            <button
-              className={inputMode.available ? "is-active" : ""}
-              disabled={!inputMode.available}
-              key={inputMode.label}
-              type="button"
-            >
-              {inputMode.label}
-              {!inputMode.available ? <small>Soon</small> : null}
-            </button>
-          ))}
-        </div>
+        <ol className="review-flow-strip" aria-label="Review flow">
+          <li>Paste code</li>
+          <li>Choose lens</li>
+          <li>Run review</li>
+          <li>Receive verdict</li>
+        </ol>
+
+        <p className="future-input-note">Working input: pasted code. PR, repository, and saved-snippet inputs come later.</p>
       </div>
 
-      <form className="cockpit-grid" onSubmit={(event) => void onSubmit(event)}>
+      <div className="mobile-review-action">
+        <button className="primary-button danger-button" type="submit" form="review-form" disabled={isReviewing}>
+          {isReviewing ? "Reviewing..." : "Run Brutal Review"}
+        </button>
+      </div>
+
+      <form id="review-form" className="cockpit-grid" onSubmit={(event) => void onSubmit(event)}>
         <CodeInputPanel
           code={code}
           filename={filename}
@@ -93,7 +87,7 @@ export function ReviewCockpit({
 
         <aside className="cockpit-rail">
           <RiskMeter hasCode={Boolean(code.trim())} />
-          <button className="primary-button danger-button" type="submit" disabled={isReviewing}>
+          <button className="primary-button danger-button desktop-review-action" type="submit" disabled={isReviewing}>
             {isReviewing ? "Reviewing..." : "Run Brutal Review"}
           </button>
           {error ? <p className="form-error">{error}</p> : null}
@@ -105,7 +99,7 @@ export function ReviewCockpit({
         <div className="section-heading compact">
           <div>
             <p className="eyebrow">Recent Reviews</p>
-            <h2>Last passes</h2>
+            <h2>What was judged last</h2>
           </div>
           <Link className="ghost-link" to="/snippets">
             View snippets
@@ -125,7 +119,7 @@ export function ReviewCockpit({
           <EmptyState
             eyebrow="Empty cockpit"
             title="No reviews yet. Your bugs are still hiding."
-            body="Paste your code. DevMind will tell you what your ego will not."
+            body="Nothing reviewed. Nothing trusted."
           />
         ) : null}
       </section>

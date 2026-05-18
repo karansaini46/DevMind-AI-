@@ -1,16 +1,19 @@
 import { Link } from "react-router-dom";
 import type { ManualReviewSummary } from "../lib/api";
+import { getStoredProductionScore, getVerdict } from "../lib/reviews";
+import { RiskBadge } from "./RiskBadge";
 
 export function RecentReviewCard({ review }: { review: ManualReviewSummary }) {
+  const productionScore = getStoredProductionScore(review.productionScore, review.score);
+
   return (
     <Link className="recent-review-card" to={`/reviews/${review.id}`}>
       <div>
         <strong>{review.filename}</strong>
-        <span>{formatMode(review.mode)}</span>
+        <RiskBadge label={getVerdict(productionScore)} />
       </div>
       <p>
-        Production {formatStoredScore(review.productionScore, review.score)} · Demo{" "}
-        {formatStoredScore(review.demoScore, review.score)}
+        Production {formatStoredScore(review.productionScore, review.score)} · {formatMode(review.mode)}
       </p>
       <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
     </Link>
