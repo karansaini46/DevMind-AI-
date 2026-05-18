@@ -1,12 +1,13 @@
 import { Queue } from "bullmq";
 import { getRedisConnectionOptions } from "./redis";
+import type { ReviewLanguage } from "../reviews/schema";
 
 export const reviewQueueName = "code-review";
 
 export interface ReviewJobData {
   snippetId: string;
   code: string;
-  language: string;
+  language: ReviewLanguage;
   filename: string;
   userId: string;
 }

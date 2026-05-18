@@ -5,6 +5,10 @@ export interface AutoReviewEvent {
   snippetId: string;
   markdown: string;
   score: number;
+  demoScore: number | null;
+  productionScore: number | null;
+  confidenceLevel: string | null;
+  mode: string | null;
   createdAt: Date;
   source: string;
   filename: string;

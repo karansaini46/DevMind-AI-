@@ -1,72 +1,71 @@
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { z } from "zod";
+import {
+  HumanMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
+import {
+  buildReviewSystemPrompt,
+  buildReviewUserPrompt,
+} from "../prompts/buildReviewPrompt";
+import type { ReviewContextTag } from "../prompts/languageRules";
 import { getReviewModel } from "./client";
+import {
+  reviewResultSchema,
+  type ReviewLanguage,
+  type ReviewMode,
+  type ReviewResult,
+  type ReviewUsage,
+} from "./schema";
 
 export interface ReviewInput {
   code: string;
-  language: string;
+  language: ReviewLanguage;
   filename: string;
+  mode: ReviewMode;
+  contexts: ReviewContextTag[];
 }
 
-const reviewPrompt = ChatPromptTemplate.fromMessages([
-  [
-    "system",
-    "You are an expert senior software engineer performing a code review. Be specific, constructive, and educational. Format your response in markdown.",
-  ],
-  [
-    "human",
-    [
-      "Review this {language} code. Filename: {filename}",
-      "",
-      "```{language}",
-      "{code}",
-      "```",
-      "",
-      "Provide:",
-      "1) Overall quality score out of 10",
-      "2) List of bugs or issues found",
-      "3) Security concerns",
-      "4) Performance suggestions",
-      "5) Code style and best practices",
-      "6) A refactored version of the code with improvements",
-    ].join("\n"),
-  ],
-]);
+export async function createStructuredReview(input: ReviewInput) {
+  const structuredModel = getReviewModel().withStructuredOutput(reviewResultSchema, {
+    includeRaw: true,
+    method: "jsonSchema",
+  });
+  const result = await structuredModel.invoke([
+    new SystemMessage(buildReviewSystemPrompt(input)),
+    new HumanMessage(buildReviewUserPrompt(input)),
+  ]);
+  const review = reviewResultSchema.parse(result.parsed);
 
-const scorePrompt = ChatPromptTemplate.fromMessages([
-  [
-    "system",
-    "You are an expert senior software engineer scoring a code review. Return a whole-number quality score from 0 to 10.",
-  ],
-  [
-    "human",
-    [
-      "Score this {language} code. Filename: {filename}",
-      "",
-      "```{language}",
-      "{code}",
-      "```",
-    ].join("\n"),
-  ],
-]);
-
-const scoreSchema = z.object({
-  score: z.number().int().min(0).max(10),
-});
-
-export async function streamReview(input: ReviewInput) {
-  return reviewPrompt.pipe(getReviewModel()).pipe(new StringOutputParser()).stream(input);
+  return {
+    review,
+    usage: extractUsage(result.raw),
+  } satisfies {
+    review: ReviewResult;
+    usage: ReviewUsage;
+  };
 }
 
-export async function createReview(input: ReviewInput) {
-  return reviewPrompt.pipe(getReviewModel()).pipe(new StringOutputParser()).invoke(input);
-}
+function extractUsage(raw: unknown): ReviewUsage {
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
 
-export async function scoreReview(input: ReviewInput) {
-  const result = await scorePrompt
-    .pipe(getReviewModel().withStructuredOutput(scoreSchema))
-    .invoke(input);
+  const candidate = raw as {
+    usage_metadata?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      total_tokens?: number;
+    };
+  };
 
-  return scoreSchema.parse(result).score;
+  return {
+    ...(typeof candidate.usage_metadata?.input_tokens === "number"
+      ? { inputTokens: candidate.usage_metadata.input_tokens }
+      : {}),
+    ...(typeof candidate.usage_metadata?.output_tokens === "number"
+      ? { outputTokens: candidate.usage_metadata.output_tokens }
+      : {}),
+    ...(typeof candidate.usage_metadata?.total_tokens === "number"
+      ? { totalTokens: candidate.usage_metadata.total_tokens }
+      : {}),
+  };
 }
