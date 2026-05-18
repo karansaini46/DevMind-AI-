@@ -1,7 +1,12 @@
 import { embedAndStore } from "../embeddings/service";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/app-error";
-import { createReview, scoreReview, type ReviewInput } from "./chains";
+import { createStructuredReview, type ReviewInput } from "./chains";
+import { renderReviewMarkdown } from "./markdown";
+import type {
+  ReviewResult,
+  ReviewUsage,
+} from "./schema";
 
 export async function createSnippet(userId: string, input: ReviewInput) {
   return prisma.codeSnippet.create({
@@ -18,7 +23,9 @@ export async function createStoredReview(input: {
   snippetId: string;
   userId: string;
   markdown: string;
-  score: number;
+  review: ReviewResult;
+  usage: ReviewUsage;
+  mode: ReviewInput["mode"];
   source?: "manual" | "webhook";
 }) {
   return prisma.review.create({
@@ -26,7 +33,15 @@ export async function createStoredReview(input: {
       snippetId: input.snippetId,
       userId: input.userId,
       feedbackMarkdown: input.markdown,
-      score: input.score,
+      score: Math.round(input.review.scores.productionScore),
+      structuredFeedback: input.review,
+      demoScore: input.review.scores.demoScore,
+      productionScore: input.review.scores.productionScore,
+      confidenceLevel: input.review.scores.confidenceLevel,
+      mode: input.mode,
+      inputTokens: input.usage.inputTokens,
+      outputTokens: input.usage.outputTokens,
+      totalTokens: input.usage.totalTokens,
       ...(input.source ? { source: input.source } : {}),
     },
   });
@@ -34,10 +49,10 @@ export async function createStoredReview(input: {
 
 export async function createCompletedReview(input: ReviewInput) {
   try {
-    const markdown = await createReview(input);
-    const score = await scoreReview(input);
+    const { review, usage } = await createStructuredReview(input);
+    const markdown = renderReviewMarkdown(review);
 
-    return { markdown, score };
+    return { markdown, review, usage };
   } catch (error) {
     if (isRateLimitError(error)) {
       throw new AppError("Too many requests, wait a moment", 429);

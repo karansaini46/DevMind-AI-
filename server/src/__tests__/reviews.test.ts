@@ -3,12 +3,9 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { app } from "../app";
 import { embedAndStore } from "../embeddings/service";
 import { prisma } from "../lib/prisma";
-import {
-  createReview,
-  scoreReview,
-  streamReview,
-} from "../reviews/chains";
+import { createStructuredReview } from "../reviews/chains";
 import { signAccessToken } from "../utils/tokens";
+import { sampleReviewResult } from "./fixtures/review-samples";
 
 vi.mock("../lib/prisma", () => ({
   prisma: {
@@ -18,14 +15,13 @@ vi.mock("../lib/prisma", () => ({
     review: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }));
 
 vi.mock("../reviews/chains", () => ({
-  createReview: vi.fn(),
-  scoreReview: vi.fn(),
-  streamReview: vi.fn(),
+  createStructuredReview: vi.fn(),
 }));
 
 vi.mock("../embeddings/service", () => ({
@@ -35,9 +31,8 @@ vi.mock("../embeddings/service", () => ({
 const codeSnippetCreate = prisma.codeSnippet.create as unknown as Mock;
 const reviewCreate = prisma.review.create as unknown as Mock;
 const reviewFindMany = prisma.review.findMany as unknown as Mock;
-const createReviewMock = createReview as unknown as Mock;
-const scoreReviewMock = scoreReview as unknown as Mock;
-const streamReviewMock = streamReview as unknown as Mock;
+const reviewFindFirst = prisma.review.findFirst as unknown as Mock;
+const createStructuredReviewMock = createStructuredReview as unknown as Mock;
 const embedAndStoreMock = embedAndStore as unknown as Mock;
 
 function buildToken() {
@@ -58,6 +53,15 @@ describe("review routes", () => {
       id: "review-1",
     });
     reviewFindMany.mockResolvedValue([]);
+    reviewFindFirst.mockResolvedValue(null);
+    createStructuredReviewMock.mockResolvedValue({
+      review: sampleReviewResult,
+      usage: {
+        inputTokens: 120,
+        outputTokens: 240,
+        totalTokens: 360,
+      },
+    });
     embedAndStoreMock.mockResolvedValue(undefined);
   });
 
@@ -83,16 +87,14 @@ describe("review routes", () => {
     expect(codeSnippetCreate).not.toHaveBeenCalled();
   });
 
-  it("creates and stores a completed review", async () => {
-    createReviewMock.mockResolvedValue("# Review");
-    scoreReviewMock.mockResolvedValue(8);
-
+  it("creates and stores a structured completed review", async () => {
     const response = await request(app)
       .post("/reviews")
       .set("Authorization", `Bearer ${buildToken()}`)
       .send({
         code: "const value = 1;",
         language: "typescript",
+        mode: "strict",
       });
 
     expect(response.status).toBe(201);
@@ -105,25 +107,62 @@ describe("review routes", () => {
       },
     });
     expect(reviewCreate).toHaveBeenCalledWith({
-      data: {
+      data: expect.objectContaining({
         snippetId: "snippet-1",
         userId: "user-1",
-        feedbackMarkdown: "# Review",
-        score: 8,
-      },
+        score: 5,
+        structuredFeedback: sampleReviewResult,
+        demoScore: 8.5,
+        productionScore: 5,
+        confidenceLevel: "High",
+        mode: "strict",
+        inputTokens: 120,
+        outputTokens: 240,
+        totalTokens: 360,
+      }),
     });
     expect(response.body).toEqual({
       reviewId: "review-1",
       snippetId: "snippet-1",
-      markdown: "# Review",
-      score: 8,
+      filename: "untitled.ts",
+      language: "typescript",
+      review: sampleReviewResult,
+      markdown: expect.stringContaining("## Quick Verdict"),
+      usage: {
+        inputTokens: 120,
+        outputTokens: 240,
+        totalTokens: 360,
+      },
       searchIndexed: true,
     });
     expect(embedAndStoreMock).toHaveBeenCalledWith("snippet-1", "const value = 1;");
   });
 
-  it("returns a friendly response for non-streaming rate limits", async () => {
-    createReviewMock.mockRejectedValue({
+  it("detects language when auto is requested", async () => {
+    await request(app)
+      .post("/reviews")
+      .set("Authorization", `Bearer ${buildToken()}`)
+      .send({
+        code: "export function sum(values: number[]) { return values.length; }",
+        language: "auto",
+        filename: "sum.ts",
+      });
+
+    expect(codeSnippetCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        filename: "sum.ts",
+        language: "typescript",
+      }),
+    });
+    expect(createStructuredReviewMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        language: "typescript",
+      }),
+    );
+  });
+
+  it("returns a friendly response for provider rate limits", async () => {
+    createStructuredReviewMock.mockRejectedValue({
       status: 429,
     });
 
@@ -142,63 +181,7 @@ describe("review routes", () => {
     expect(reviewCreate).not.toHaveBeenCalled();
   });
 
-  it("streams chunks, stores the review, and sends a completion marker", async () => {
-    streamReviewMock.mockResolvedValue(
-      (async function* () {
-        yield "# Review";
-        yield "\nUseful feedback";
-      })(),
-    );
-    scoreReviewMock.mockResolvedValue(9);
-
-    const response = await request(app)
-      .post("/reviews/stream")
-      .set("Authorization", `Bearer ${buildToken()}`)
-      .send({
-        code: "const value = 1;",
-        language: "javascript",
-        filename: "sample.js",
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.headers["content-type"]).toContain("text/event-stream");
-    expect(response.text).toContain('data: "# Review"');
-    expect(response.text).toContain('data: "\\nUseful feedback"');
-    expect(response.text).toContain('event: indexing');
-    expect(response.text).toContain('data: {"searchIndexed":true}');
-    expect(response.text).toContain("data: [DONE]");
-    expect(reviewCreate).toHaveBeenCalledWith({
-      data: {
-        snippetId: "snippet-1",
-        userId: "user-1",
-        feedbackMarkdown: "# Review\nUseful feedback",
-        score: 9,
-      },
-    });
-  });
-
-  it("returns a friendly streaming message for provider rate limits", async () => {
-    streamReviewMock.mockRejectedValue({
-      status: 429,
-    });
-
-    const response = await request(app)
-      .post("/reviews/stream")
-      .set("Authorization", `Bearer ${buildToken()}`)
-      .send({
-        code: "const value = 1;",
-        language: "javascript",
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.text).toContain("event: error");
-    expect(response.text).toContain("Too many requests, wait a moment");
-    expect(reviewCreate).not.toHaveBeenCalled();
-  });
-
   it("keeps a completed review when indexing fails", async () => {
-    createReviewMock.mockResolvedValue("# Review");
-    scoreReviewMock.mockResolvedValue(8);
     embedAndStoreMock.mockRejectedValueOnce(new Error("provider unavailable"));
 
     const response = await request(app)
@@ -213,13 +196,93 @@ describe("review routes", () => {
     expect(response.body.searchIndexed).toBe(false);
   });
 
+  it("returns recent manual review history", async () => {
+    reviewFindMany.mockResolvedValueOnce([
+      {
+        id: "review-1",
+        snippetId: "snippet-1",
+        score: 5,
+        demoScore: 8.5,
+        productionScore: 5,
+        confidenceLevel: "High",
+        mode: "production",
+        createdAt: new Date("2026-05-16T12:00:00.000Z"),
+        snippet: {
+          filename: "src/app.ts",
+          language: "typescript",
+        },
+      },
+    ]);
+
+    const response = await request(app)
+      .get("/reviews/history")
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      reviews: [
+        {
+          id: "review-1",
+          snippetId: "snippet-1",
+          score: 5,
+          demoScore: 8.5,
+          productionScore: 5,
+          confidenceLevel: "High",
+          mode: "production",
+          createdAt: "2026-05-16T12:00:00.000Z",
+          filename: "src/app.ts",
+          language: "typescript",
+        },
+      ],
+    });
+  });
+
+  it("returns one stored manual review", async () => {
+    reviewFindFirst.mockResolvedValueOnce({
+      id: "review-1",
+      snippetId: "snippet-1",
+      feedbackMarkdown: "## Quick Verdict",
+      structuredFeedback: sampleReviewResult,
+      score: 5,
+      demoScore: 8.5,
+      productionScore: 5,
+      confidenceLevel: "High",
+      mode: "production",
+      inputTokens: 120,
+      outputTokens: 240,
+      totalTokens: 360,
+      createdAt: new Date("2026-05-16T12:00:00.000Z"),
+      snippet: {
+        filename: "src/app.ts",
+        language: "typescript",
+        rawCode: "const value = 1;",
+      },
+    });
+
+    const response = await request(app)
+      .get("/reviews/review-1")
+      .set("Authorization", `Bearer ${buildToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.review.review).toEqual(sampleReviewResult);
+    expect(response.body.review.usage).toEqual({
+      inputTokens: 120,
+      outputTokens: 240,
+      totalTokens: 360,
+    });
+  });
+
   it("returns recent webhook reviews for the dashboard", async () => {
     reviewFindMany.mockResolvedValueOnce([
       {
         id: "review-1",
         snippetId: "snippet-1",
         feedbackMarkdown: "# Review",
-        score: 8,
+        score: 5,
+        demoScore: 8.5,
+        productionScore: 5,
+        confidenceLevel: "High",
+        mode: "production",
         createdAt: new Date("2026-05-16T12:00:00.000Z"),
         source: "webhook",
         snippet: {
@@ -240,7 +303,11 @@ describe("review routes", () => {
           id: "review-1",
           snippetId: "snippet-1",
           markdown: "# Review",
-          score: 8,
+          score: 5,
+          demoScore: 8.5,
+          productionScore: 5,
+          confidenceLevel: "High",
+          mode: "production",
           createdAt: "2026-05-16T12:00:00.000Z",
           source: "webhook",
           filename: "src/app.ts",

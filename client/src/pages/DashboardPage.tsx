@@ -178,7 +178,10 @@ export function DashboardPage() {
                   <span>{review.language}</span>
                 </div>
                 <p>{toReviewExcerpt(review.markdown)}</p>
-                <span>Score {review.score}/10</span>
+                <span>
+                  Production {formatReviewScore(review.productionScore, review.score)} · Demo{" "}
+                  {formatReviewScore(review.demoScore, review.score)}
+                </span>
               </Link>
             ))}
           </div>
@@ -243,4 +246,8 @@ function toReviewExcerpt(markdown: string) {
   const compact = markdown.replace(/\s+/g, " ").trim();
 
   return compact.length > 160 ? `${compact.slice(0, 157)}...` : compact;
+}
+
+function formatReviewScore(value: number | null, fallback: number) {
+  return `${(value ?? fallback).toFixed(1)}/10`;
 }

@@ -5,6 +5,7 @@ import {
   createStoredReview,
   indexSnippet,
 } from "../reviews/service";
+import { resolveReviewContext } from "../reviews/language-detection";
 import { publishAutoReview } from "../services/review-events";
 import { getRedisConnectionOptions } from "./redis";
 import { reviewQueueName, type ReviewJobData } from "./reviewQueue";
@@ -25,6 +26,10 @@ export function startReviewWorker() {
           snippetId: true,
           feedbackMarkdown: true,
           score: true,
+          demoScore: true,
+          productionScore: true,
+          confidenceLevel: true,
+          mode: true,
           createdAt: true,
           source: true,
         },
@@ -36,6 +41,10 @@ export function startReviewWorker() {
           snippetId: existingReview.snippetId,
           markdown: existingReview.feedbackMarkdown,
           score: existingReview.score,
+          demoScore: existingReview.demoScore,
+          productionScore: existingReview.productionScore,
+          confidenceLevel: existingReview.confidenceLevel,
+          mode: existingReview.mode,
           createdAt: existingReview.createdAt,
           source: existingReview.source,
           filename: job.data.filename,
@@ -44,17 +53,26 @@ export function startReviewWorker() {
         return existingReview;
       }
 
-      const input = {
+      const resolved = resolveReviewContext({
         code: job.data.code,
         language: job.data.language,
         filename: job.data.filename,
+      });
+      const input = {
+        code: job.data.code,
+        language: resolved.language,
+        filename: job.data.filename,
+        mode: "production" as const,
+        contexts: resolved.contexts,
       };
-      const { markdown, score } = await createCompletedReview(input);
+      const { markdown, review: reviewResult, usage } = await createCompletedReview(input);
       const review = await createStoredReview({
         snippetId: job.data.snippetId,
         userId: job.data.userId,
         markdown,
-        score,
+        review: reviewResult,
+        usage,
+        mode: input.mode,
         source: "webhook",
       });
       await indexSnippet(job.data.snippetId, job.data.code);
@@ -64,6 +82,10 @@ export function startReviewWorker() {
         snippetId: review.snippetId,
         markdown: review.feedbackMarkdown,
         score: review.score,
+        demoScore: review.demoScore,
+        productionScore: review.productionScore,
+        confidenceLevel: review.confidenceLevel,
+        mode: review.mode,
         createdAt: review.createdAt,
         source: review.source,
         filename: job.data.filename,
