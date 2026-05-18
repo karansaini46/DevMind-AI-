@@ -12,10 +12,10 @@ export function SettingsPage() {
 
   return (
     <section className="settings-page">
-      <section className="page-hero-card">
-        <p className="eyebrow">Settings</p>
-        <h1>Workspace defaults</h1>
-        <p>Keep the cockpit sharp, honest, and tuned to how you work.</p>
+      <section className="page-heading">
+        <p className="eyebrow">Review Defaults</p>
+        <h1>How the cockpit should judge.</h1>
+        <p>Keep the review posture explicit before code reaches the rail.</p>
       </section>
 
       <section className="dashboard-panel settings-panel">
@@ -54,7 +54,7 @@ export function SettingsPage() {
             Manage
           </Link>
         </div>
-        <p>Account connection and repository monitoring now live in the GitHub setup area.</p>
+        <p>One connected account. One watched repository. No silent scope creep.</p>
       </section>
     </section>
   );

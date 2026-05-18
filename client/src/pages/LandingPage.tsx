@@ -14,8 +14,6 @@ export function LandingPage() {
           <strong>DevMind</strong>
         </div>
         <nav>
-          <a href="#anatomy">Review anatomy</a>
-          <a href="#risk-signals">Risk signals</a>
           <Link to="/login">Sign in</Link>
         </nav>
       </header>
@@ -28,9 +26,9 @@ export function LandingPage() {
 
       <section className="landing-cta">
         <div>
-          <p className="eyebrow">Repository boundary</p>
+          <p className="eyebrow">Review Boundary</p>
           <h2>Fix before you ship.</h2>
-          <p>Reviews stay in your workspace. Repository monitoring starts only after you connect one.</p>
+          <p>Pasted reviews and repository watch are separate actions. Nothing starts watching pushes until you connect one.</p>
         </div>
         <Link className="primary-link danger-link" to="/register">
           Run brutal review

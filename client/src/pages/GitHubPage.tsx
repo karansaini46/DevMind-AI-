@@ -148,10 +148,10 @@ export function GitHubPage() {
 
   return (
     <section className="github-page">
-      <section className="page-hero-card">
-        <p className="eyebrow">GitHub</p>
-        <h1>Watch code before production does.</h1>
-        <p>Connect your account, choose one repository, and keep new push reviews flowing into the workspace.</p>
+      <section className="page-heading">
+        <p className="eyebrow">Repository Watch</p>
+        <h1>Watch pushes before production does.</h1>
+        <p>Connect one account. Choose one repository. Review every new push that matters.</p>
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}

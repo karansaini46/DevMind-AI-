@@ -140,7 +140,22 @@ export function DashboardPage() {
         <div>
           <p className="eyebrow">Production Risk</p>
           <h1>{user?.name ? `${user.name.split(" ")[0]}, here is what still needs attention.` : "Here is what still needs attention."}</h1>
-          <p>Recent reviews, unresolved risk, and the next code path worth reopening.</p>
+          <dl className="dashboard-readout">
+            <div>
+              <dt>Needs attention</dt>
+              <dd>{dashboard.attentionQueue.length}</dd>
+            </div>
+            <div>
+              <dt>Average score</dt>
+              <dd>{dashboard.averageScore === null ? "—" : `${dashboard.averageScore}/100`}</dd>
+            </div>
+            <div>
+              <dt>Repeating risk</dt>
+              <dd>
+                <RiskBadge label={dashboard.repeatedRisk.label} />
+              </dd>
+            </div>
+          </dl>
         </div>
         <Link className="primary-link danger-link" to="/review">
           Start a review
@@ -148,27 +163,6 @@ export function DashboardPage() {
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}
-
-      <div className="diagnostic-strip">
-        <DiagnosticCard
-          label="Needs attention"
-          value={String(dashboard.attentionQueue.length)}
-          note="Reviews below Fix First"
-          tone={dashboard.attentionQueue.length ? "Critical" : "Stable"}
-        />
-        <DiagnosticCard
-          label="Average score"
-          value={dashboard.averageScore === null ? "—" : `${dashboard.averageScore}/100`}
-          note="Recent review set"
-          tone={dashboard.averageScore === null ? "Warning" : getRiskLevel(dashboard.averageScore)}
-        />
-        <DiagnosticCard
-          label="Repeating pattern"
-          value={dashboard.repeatedRisk.label}
-          note={dashboard.repeatedRisk.note}
-          tone={dashboard.repeatedRisk.label}
-        />
-      </div>
 
       <div className="dashboard-columns diagnostic-columns">
         <section className="dashboard-panel next-fix-panel">
@@ -299,29 +293,6 @@ export function DashboardPage() {
         </section>
       </div>
     </section>
-  );
-}
-
-function DiagnosticCard({
-  label,
-  value,
-  note,
-  tone,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  tone: RiskLevel;
-}) {
-  return (
-    <article className="diagnostic-card">
-      <span>{label}</span>
-      <div>
-        <strong>{value}</strong>
-        <RiskBadge label={tone} />
-      </div>
-      <small>{note}</small>
-    </article>
   );
 }
 
