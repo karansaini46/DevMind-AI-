@@ -51,9 +51,9 @@ export function SearchPage() {
 
   return (
     <section className="search-page">
-      <section className="page-hero-card search-hero">
-        <p className="eyebrow">Semantic search</p>
-        <h1>Find code by meaning.</h1>
+      <section className="page-heading search-hero">
+        <p className="eyebrow">Reviewed Code Search</p>
+        <h1>Find judged code paths.</h1>
         <form className="search-form" onSubmit={(event) => void handleSubmit(event)}>
           <input
             value={query}
@@ -61,7 +61,7 @@ export function SearchPage() {
             placeholder="error handling middleware"
           />
           <button className="primary-button" type="submit" disabled={isLoading}>
-            {isLoading ? "Searching..." : "Search snippets"}
+            {isLoading ? "Searching..." : "Search judged code"}
           </button>
         </form>
         {error ? <p className="form-error">{error}</p> : null}

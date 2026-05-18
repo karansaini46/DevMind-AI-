@@ -7,7 +7,6 @@ const navigation = [
   { to: "/snippets", label: "Snippets" },
   { to: "/github", label: "GitHub" },
   { to: "/search", label: "Search" },
-  { to: "", label: "Reports", disabled: true },
   { to: "/settings", label: "Settings" },
 ] as const;
 
@@ -25,24 +24,17 @@ export function Sidebar() {
       </div>
 
       <nav className="workspace-nav" aria-label="Primary navigation">
-        {navigation.map((item) =>
-          "disabled" in item && item.disabled ? (
-            <span className="workspace-link is-disabled" key={item.label}>
-              {item.label}
-              <small>Soon</small>
-            </span>
-          ) : (
-            <NavLink
-              key={item.to}
-              className={({ isActive }) =>
-                isActive ? "workspace-link is-active" : "workspace-link"
-              }
-              to={item.to}
-            >
-              {item.label}
-            </NavLink>
-          ),
-        )}
+        {navigation.map((item) => (
+          <NavLink
+            key={item.to}
+            className={({ isActive }) =>
+              isActive ? "workspace-link is-active" : "workspace-link"
+            }
+            to={item.to}
+          >
+            {item.label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="sidebar-profile">
@@ -53,7 +45,7 @@ export function Sidebar() {
         )}
         <div>
           <strong>{user?.name}</strong>
-          <span>{user?.githubUsername ? `@${user.githubUsername}` : "Workspace member"}</span>
+          <span>{user?.githubUsername ? `@${user.githubUsername}` : "Reviewer"}</span>
         </div>
       </div>
     </aside>

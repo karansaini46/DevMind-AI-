@@ -11,7 +11,7 @@ export function ProtectedRoute() {
       <main className="app-shell">
         <section className="status-card">
           <p className="eyebrow">DevMind</p>
-          <h1>Loading your workspace.</h1>
+          <h1>Loading review cockpit.</h1>
         </section>
       </main>
     );

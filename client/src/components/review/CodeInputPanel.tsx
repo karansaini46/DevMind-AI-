@@ -54,6 +54,17 @@ export function CodeInputPanel({
         />
       </div>
 
+      <section className="lens-panel">
+        <div className="cockpit-step-heading compact">
+          <span>02</span>
+          <div>
+            <p className="eyebrow">Choose lens</p>
+            <h2>Tell the review what to punish.</h2>
+          </div>
+        </div>
+        <ReviewModeSelector mode={mode} disabled={isReviewing} onChange={onModeChange} />
+      </section>
+
       <details className="advanced-input-controls">
         <summary>Advanced input controls</summary>
         <div className="review-fields review-fields-wide">
@@ -92,17 +103,6 @@ export function CodeInputPanel({
           </label>
         </div>
       </details>
-
-      <section className="lens-panel">
-        <div className="cockpit-step-heading compact">
-          <span>02</span>
-          <div>
-            <p className="eyebrow">Choose lens</p>
-            <h2>Tell the review what to punish.</h2>
-          </div>
-        </div>
-        <ReviewModeSelector mode={mode} disabled={isReviewing} onChange={onModeChange} />
-      </section>
     </section>
   );
 }

@@ -61,7 +61,6 @@ export function ReviewCockpit({
           <li>Receive verdict</li>
         </ol>
 
-        <p className="future-input-note">Working input: pasted code. PR, repository, and saved-snippet inputs come later.</p>
       </div>
 
       <div className="mobile-review-action">

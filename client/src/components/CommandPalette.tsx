@@ -15,8 +15,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     () => [
       { label: "Start a review", hint: "Review", run: () => navigate("/review") },
       { label: "Open dashboard", hint: "Dashboard", run: () => navigate("/dashboard") },
-      { label: "Search snippets", hint: "Search", run: () => navigate("/search") },
-      { label: "Browse snippets", hint: "Snippets", run: () => navigate("/snippets") },
+      { label: "Search reviewed code", hint: "Search", run: () => navigate("/search") },
+      { label: "Browse reviewed code", hint: "Snippets", run: () => navigate("/snippets") },
       { label: "GitHub setup", hint: "GitHub", run: () => navigate("/github") },
       { label: "Open settings", hint: "Settings", run: () => navigate("/settings") },
     ],

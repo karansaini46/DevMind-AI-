@@ -68,10 +68,10 @@ export function SnippetsPage() {
 
   return (
     <section className="snippets-page">
-      <section className="page-hero-card">
-        <p className="eyebrow">Snippets</p>
-        <h1>Saved code from completed reviews.</h1>
-        <p>Every reviewed snippet becomes something you can revisit, inspect, and search by meaning.</p>
+      <section className="page-heading">
+        <p className="eyebrow">Reviewed Code</p>
+        <h1>Code paths that already received a verdict.</h1>
+        <p>Every snippet here has been through review and is ready to reopen.</p>
       </section>
 
       {error ? <p className="form-error">{error}</p> : null}
