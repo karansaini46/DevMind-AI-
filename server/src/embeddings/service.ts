@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/app-error";
 import { env } from "../utils/env";
@@ -7,8 +6,8 @@ import { env } from "../utils/env";
 const chunkSize = 500;
 const chunkOverlap = 50;
 const embeddingDimensions = 768;
-
-let embeddingClient: GoogleGenerativeAIEmbeddings | null = null;
+const embeddingModel = "gemini-embedding-001";
+const embeddingEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent`;
 
 export function chunkCode(code: string) {
   if (!code) {
@@ -33,7 +32,7 @@ export function chunkCode(code: string) {
 }
 
 export async function embedQuery(content: string) {
-  const vector = await getEmbeddingClient().embedQuery(content);
+  const vector = await requestEmbedding(content);
 
   if (vector.length !== embeddingDimensions) {
     throw new Error(`Expected ${embeddingDimensions} embedding values`);
@@ -53,20 +52,45 @@ export async function embedAndStore(snippetId: string, code: string) {
   for (const [index, chunk] of chunks.entries()) {
     await prisma.$executeRaw`
       INSERT INTO "Embedding" (id, "snippetId", content, embedding)
-      VALUES (${randomUUID()}, ${snippetId}, ${chunk}, ${JSON.stringify(vectors[index])}::vector)
+      VALUES (${randomUUID()}::uuid, ${snippetId}::uuid, ${chunk}, ${JSON.stringify(vectors[index])}::vector)
     `;
   }
 }
 
-function getEmbeddingClient() {
+async function requestEmbedding(content: string) {
   if (!env.GEMINI_API_KEY) {
     throw new AppError("Embedding service is not configured", 503);
   }
 
-  embeddingClient ??= new GoogleGenerativeAIEmbeddings({
-    model: "text-embedding-004",
-    apiKey: env.GEMINI_API_KEY,
+  const response = await fetch(embeddingEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": env.GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      model: `models/${embeddingModel}`,
+      content: {
+        parts: [{ text: content }],
+      },
+      outputDimensionality: embeddingDimensions,
+    }),
   });
 
-  return embeddingClient;
+  const body = (await response.json().catch(() => null)) as
+    | {
+        embedding?: {
+          values?: number[];
+        };
+        error?: {
+          message?: string;
+        };
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "Unable to generate embedding");
+  }
+
+  return body?.embedding?.values ?? [];
 }
