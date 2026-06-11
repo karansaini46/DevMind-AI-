@@ -8,6 +8,7 @@ const after = [
   "Exact failure points surfaced",
   "Severity-ranked report",
   "One senior verdict before release",
+  "Automated commit comments",
 ];
 
 export function BeforeAfterSection() {

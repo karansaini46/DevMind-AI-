@@ -11,6 +11,10 @@ const anatomy = [
     title: "Fix before ship",
     body: "Concrete next actions and improved code when the implementation needs surgery.",
   },
+  {
+    title: "Commit comments",
+    body: "Automated reviews and quality scores posted directly as comments on your GitHub commits.",
+  },
 ] as const;
 
 export function ReviewAnatomySection() {

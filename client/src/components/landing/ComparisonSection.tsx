@@ -3,6 +3,7 @@ const rows = [
   { generic: "Mixed advice", product: "Severity-ranked findings" },
   { generic: "Maybe this helps", product: "Fix before ship" },
   { generic: "Hard to revisit", product: "Saved review report" },
+  { generic: "Manual copy-paste", product: "Automated commit comments" },
 ];
 
 export function ComparisonSection() {
