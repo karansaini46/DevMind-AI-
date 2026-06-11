@@ -42,6 +42,27 @@ export async function deleteRepositoryWebhook(input: {
   });
 }
 
+export async function createCommitComment(input: {
+  accessToken: string;
+  repoFullName: string;
+  commitSha: string;
+  body: string;
+}) {
+  try {
+    await githubRequest<{ id: number }>({
+      accessToken: input.accessToken,
+      method: "POST",
+      path: `/repos/${input.repoFullName}/commits/${input.commitSha}/comments`,
+      body: {
+        body: input.body,
+      },
+    });
+  } catch (error) {
+    // Don't throw — commenting is best-effort so it doesn't break the review flow
+    console.error("Failed to post commit comment", error);
+  }
+}
+
 export async function getRepositoryFileContent(input: {
   accessToken: string;
   repoFullName: string;

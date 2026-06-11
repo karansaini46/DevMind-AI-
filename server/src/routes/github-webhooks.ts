@@ -182,6 +182,8 @@ async function queueChangedFiles(input: {
           language,
           filename: path,
           userId: input.userId,
+          commitSha: input.payload.after,
+          repoFullName: input.payload.repository.full_name,
         },
         {
           jobId,
