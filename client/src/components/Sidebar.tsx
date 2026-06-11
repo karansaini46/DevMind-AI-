@@ -16,7 +16,7 @@ export function Sidebar() {
   return (
     <aside className="workspace-sidebar">
       <div className="brand-lockup">
-        <span />
+        <img src="/logo.png" alt="DevMind AI" className="brand-logo" />
         <div>
           <p className="eyebrow">DevMind</p>
           <strong>Review Cockpit</strong>

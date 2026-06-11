@@ -10,7 +10,7 @@ export function LandingPage() {
     <main className="landing-page">
       <header className="landing-header">
         <div className="brand-lockup">
-          <span />
+          <img src="/logo.png" alt="DevMind AI" className="brand-logo" />
           <strong>DevMind</strong>
         </div>
         <nav>
