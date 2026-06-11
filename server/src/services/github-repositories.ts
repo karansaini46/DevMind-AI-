@@ -42,6 +42,9 @@ export async function deleteRepositoryWebhook(input: {
   });
 }
 
+/**
+ * Posts a review feedback markdown text as a comment directly on a specific Git commit.
+ */
 export async function createCommitComment(input: {
   accessToken: string;
   repoFullName: string;
