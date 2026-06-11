@@ -76,6 +76,10 @@ The platform architecture is designed to handle file analysis asynchronously, pr
 - **Manual Review Streaming**: Manual code reviews stream Markdown and structured reviews to the client in real-time.
 - **Webhook Event Hub**: Webhook review events publish updates through a centralized Node.js `EventEmitter` to feed active SSE client streams when background jobs finish.
 
+### 6. Automated GitHub Commit Comments
+- **Inline GitHub Review**: After analyzing a commit pushed via a webhook, the system automatically posts the structured AI review (including scores, findings, and feedback) as a comment directly on the commit in GitHub.
+- **Self-Service Access**: Authenticated users can connect their repos, and the app uses their OAuth token to post comments on their behalf.
+
 ## Tech Stack
 
 ### Backend
