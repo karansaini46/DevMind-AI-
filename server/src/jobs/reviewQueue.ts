@@ -10,6 +10,8 @@ export interface ReviewJobData {
   language: ReviewLanguage;
   filename: string;
   userId: string;
+  commitSha?: string;
+  repoFullName?: string;
 }
 
 let reviewQueue: Queue<ReviewJobData> | null = null;

@@ -6,7 +6,9 @@ import {
   indexSnippet,
 } from "../reviews/service";
 import { resolveReviewContext } from "../reviews/language-detection";
+import { createCommitComment } from "../services/github-repositories";
 import { publishAutoReview } from "../services/review-events";
+import { decryptGitHubAccessToken } from "../utils/github-token-crypto";
 import { getRedisConnectionOptions } from "./redis";
 import { reviewQueueName, type ReviewJobData } from "./reviewQueue";
 
@@ -91,6 +93,32 @@ export function startReviewWorker() {
         filename: job.data.filename,
         language: job.data.language,
       });
+
+      // Post review as a GitHub commit comment
+      if (job.data.commitSha && job.data.repoFullName) {
+        const user = await prisma.user.findUnique({
+          where: { id: job.data.userId },
+          select: { githubAccessToken: true },
+        });
+
+        if (user?.githubAccessToken) {
+          const score = review.productionScore ?? review.score;
+          const commentBody = [
+            `## 🤖 DevMind AI Review — \`${job.data.filename}\``,
+            "",
+            `**Score:** ${score}/10 · **Mode:** Production`,
+            "",
+            markdown,
+          ].join("\n");
+
+          await createCommitComment({
+            accessToken: decryptGitHubAccessToken(user.githubAccessToken),
+            repoFullName: job.data.repoFullName,
+            commitSha: job.data.commitSha,
+            body: commentBody,
+          });
+        }
+      }
 
       console.log(`Completed webhook review for ${job.data.filename}`);
       return review;
