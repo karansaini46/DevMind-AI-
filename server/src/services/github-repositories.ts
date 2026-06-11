@@ -126,6 +126,7 @@ function buildHeaders(accessToken: string, accept: string) {
     Accept: accept,
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
+    "User-Agent": "DevMind-AI-App",
     "X-GitHub-Api-Version": "2022-11-28",
   };
 }
