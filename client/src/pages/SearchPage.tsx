@@ -51,9 +51,9 @@ export function SearchPage() {
 
   return (
     <section className="search-page">
-      <section className="page-hero-card search-hero">
-        <p className="eyebrow">Semantic search</p>
-        <h1>Find code by meaning.</h1>
+      <section className="page-heading search-hero">
+        <p className="eyebrow">Reviewed Code Search</p>
+        <h1>Find judged code paths.</h1>
         <form className="search-form" onSubmit={(event) => void handleSubmit(event)}>
           <input
             value={query}
@@ -61,7 +61,7 @@ export function SearchPage() {
             placeholder="error handling middleware"
           />
           <button className="primary-button" type="submit" disabled={isLoading}>
-            {isLoading ? "Searching..." : "Search snippets"}
+            {isLoading ? "Searching..." : "Search judged code"}
           </button>
         </form>
         {error ? <p className="form-error">{error}</p> : null}
@@ -86,14 +86,14 @@ export function SearchPage() {
         </div>
       ) : hasSearched && !isLoading && !error ? (
         <EmptyState
-          title="No matching code found."
-          body="Try a broader phrase, or review more snippets first."
+          title="No reviewed code matches that search."
+          body="Try a broader phrase, or review the code path first."
         />
       ) : !hasSearched ? (
         <EmptyState
           eyebrow="Search"
-          title="Ask for the code you remember, not the filename you forgot."
-          body="Search by behavior, failure path, or domain language."
+          title="Search what has already been judged."
+          body="Find code by behavior, failure path, or domain language."
         />
       ) : null}
     </section>

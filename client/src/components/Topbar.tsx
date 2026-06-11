@@ -15,12 +15,12 @@ export function Topbar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const logout = useAuthStore((state) => state.logout);
   const title = location.pathname.startsWith("/reviews/")
     ? "Review Report"
-    : titles[location.pathname] ?? "Workspace";
+    : titles[location.pathname] ?? "Review Cockpit";
 
   return (
     <header className="workspace-header">
       <div>
-        <p className="eyebrow">Workspace</p>
+        <p className="eyebrow">DevMind</p>
         <strong>{title}</strong>
       </div>
 

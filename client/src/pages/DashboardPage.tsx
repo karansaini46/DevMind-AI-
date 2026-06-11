@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { RecentReviewCard } from "../components/RecentReviewCard";
+import { RiskBadge } from "../components/RiskBadge";
 import {
   API_URL,
   parseApiError,
@@ -9,18 +10,16 @@ import {
   type ManualReviewSummary,
 } from "../lib/api";
 import {
-  goals,
-  labelForValue,
-  readOnboardingPreferences,
-  reviewStyles,
-  roles,
-} from "../lib/onboarding";
+  getRiskLevel,
+  getStoredProductionScore,
+  getVerdict,
+  type RiskLevel,
+} from "../lib/reviews";
 import { useAuthStore } from "../store/auth-store";
 
 export function DashboardPage() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-  const preferences = readOnboardingPreferences();
   const [manualReviews, setManualReviews] = useState<ManualReviewSummary[]>([]);
   const [autoReviews, setAutoReviews] = useState<AutoReview[]>([]);
   const [connectedRepo, setConnectedRepo] = useState<string | null>(null);
@@ -113,33 +112,50 @@ export function DashboardPage() {
     return () => controller.abort();
   }, [token]);
 
-  const metrics = useMemo(() => {
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const thisWeek = manualReviews.filter((review) => new Date(review.createdAt).getTime() >= sevenDaysAgo);
-    const productionScores = manualReviews
-      .map((review) => review.productionScore)
-      .filter((score): score is number => typeof score === "number");
-    const averageScore = productionScores.length
-      ? productionScores.reduce((sum, score) => sum + score, 0) / productionScores.length
+  const dashboard = useMemo(() => {
+    const scoredReviews = manualReviews.map((review) => ({
+      review,
+      score: getStoredProductionScore(review.productionScore, review.score),
+    }));
+    const attentionQueue = scoredReviews
+      .filter((item) => item.score < 70)
+      .sort((left, right) => left.score - right.score);
+    const lowestReview = attentionQueue[0] ?? [...scoredReviews].sort((left, right) => left.score - right.score)[0];
+    const averageScore = scoredReviews.length
+      ? Math.round(scoredReviews.reduce((sum, item) => sum + item.score, 0) / scoredReviews.length)
       : null;
+    const repeatedRisk = getRepeatedRisk(scoredReviews.map((item) => getRiskLevel(item.score)));
 
     return {
-      reviewsThisWeek: thisWeek.length,
+      attentionQueue,
+      lowestReview,
       averageScore,
-      savedSnippets: new Set(manualReviews.map((review) => review.snippetId)).size,
+      repeatedRisk,
     };
   }, [manualReviews]);
 
   return (
     <section className="dashboard-page">
-      <section className="dashboard-hero">
+      <section className="dashboard-hero diagnostic-hero">
         <div>
-          <p className="eyebrow">Workspace pulse</p>
-          <h1>Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""}.</h1>
-          <p>
-            {labelForValue(roles, preferences.role)} · {labelForValue(reviewStyles, preferences.reviewStyle)} ·{" "}
-            {labelForValue(goals, preferences.goal)}
-          </p>
+          <p className="eyebrow">Production Risk</p>
+          <h1>{user?.name ? `${user.name.split(" ")[0]}, here is what still needs attention.` : "Here is what still needs attention."}</h1>
+          <dl className="dashboard-readout">
+            <div>
+              <dt>Needs attention</dt>
+              <dd>{dashboard.attentionQueue.length}</dd>
+            </div>
+            <div>
+              <dt>Average score</dt>
+              <dd>{dashboard.averageScore === null ? "—" : `${dashboard.averageScore}/100`}</dd>
+            </div>
+            <div>
+              <dt>Repeating risk</dt>
+              <dd>
+                <RiskBadge label={dashboard.repeatedRisk.label} />
+              </dd>
+            </div>
+          </dl>
         </div>
         <Link className="primary-link danger-link" to="/review">
           Start a review
@@ -148,27 +164,67 @@ export function DashboardPage() {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      <div className="metric-grid">
-        <MetricCard label="Reviews this week" value={String(metrics.reviewsThisWeek)} note="Latest 50 reviews" />
-        <MetricCard
-          label="Average production score"
-          value={metrics.averageScore === null ? "—" : `${metrics.averageScore.toFixed(1)}/10`}
-          note="Recent review set"
-        />
-        <MetricCard label="Saved snippets" value={String(metrics.savedSnippets)} note="From completed reviews" />
-        <MetricCard
-          label="GitHub status"
-          value={user?.githubId ? "Connected" : "Not connected"}
-          note={connectedRepo ?? "No repository linked"}
-        />
+      <div className="dashboard-columns diagnostic-columns">
+        <section className="dashboard-panel next-fix-panel">
+          <div className="section-heading compact">
+            <div>
+              <p className="eyebrow">Fix next</p>
+              <h2>Lowest recent production score</h2>
+            </div>
+          </div>
+
+          {isLoading ? <div className="skeleton-stack" aria-label="Loading next fix" /> : null}
+          {!isLoading && dashboard.lowestReview ? (
+            <article className="next-fix-card">
+              <div>
+                <RiskBadge label={getVerdict(dashboard.lowestReview.score)} />
+                <strong>{dashboard.lowestReview.score}/100</strong>
+              </div>
+              <h3>{dashboard.lowestReview.review.filename}</h3>
+              <p>
+                This is the weakest reviewed path in the recent set. Reopen it before lower-risk work.
+              </p>
+              <Link className="ghost-link" to={`/reviews/${dashboard.lowestReview.review.id}`}>
+                Open report
+              </Link>
+            </article>
+          ) : !isLoading ? (
+            <EmptyState
+              title="No reviews yet. Your bugs are still hiding."
+              body="Paste code. Get the senior verdict."
+            />
+          ) : null}
+        </section>
+
+        <section className="dashboard-panel attention-panel">
+          <div className="section-heading compact">
+            <div>
+              <p className="eyebrow">Attention queue</p>
+              <h2>Reviews still carrying risk</h2>
+            </div>
+          </div>
+
+          {dashboard.attentionQueue.length ? (
+            <div className="review-card-list">
+              {dashboard.attentionQueue.slice(0, 4).map(({ review }) => (
+                <RecentReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          ) : !isLoading ? (
+            <EmptyState
+              title="Nothing risky in the recent set."
+              body="Safe to ship is earned one review at a time."
+            />
+          ) : null}
+        </section>
       </div>
 
-      <div className="dashboard-columns">
+      <div className="dashboard-columns diagnostic-columns">
         <section className="dashboard-panel">
           <div className="section-heading compact">
             <div>
               <p className="eyebrow">Recent reviews</p>
-              <h2>Last manual passes</h2>
+              <h2>What you judged last</h2>
             </div>
             <Link className="ghost-link" to="/snippets">
               All snippets
@@ -184,26 +240,37 @@ export function DashboardPage() {
             </div>
           ) : !isLoading ? (
             <EmptyState
-              title="No reviews yet. Your bugs are still hiding."
-              body="Start with a pasted snippet and build your review history from there."
+              title="Nothing reviewed. Nothing trusted."
+              body="Every report starts with one pasted code path."
             />
           ) : null}
         </section>
 
-        <section className="dashboard-panel">
+        <section className="dashboard-panel github-status-panel">
           <div className="section-heading compact">
             <div>
-              <p className="eyebrow">Repository monitoring</p>
-              <h2>Recent push reviews</h2>
+              <p className="eyebrow">GitHub</p>
+              <h2>Repository watch</h2>
             </div>
             <Link className="ghost-link" to="/github">
               Configure
             </Link>
           </div>
 
+          <div className="github-diagnostic">
+            <div>
+              <span>Connection</span>
+              <strong>{user?.githubId ? "Connected" : "Not connected"}</strong>
+            </div>
+            <div>
+              <span>Repository</span>
+              <strong>{connectedRepo ?? "None linked"}</strong>
+            </div>
+          </div>
+
           {autoReviews.length ? (
             <div className="auto-review-list">
-              {autoReviews.slice(0, 4).map((review) => (
+              {autoReviews.slice(0, 3).map((review) => (
                 <Link className="auto-review-item" key={review.id} to={`/snippets/${review.snippetId}`}>
                   <div>
                     <strong>{review.filename}</strong>
@@ -219,39 +286,43 @@ export function DashboardPage() {
             </div>
           ) : (
             <EmptyState
-              title="Connect GitHub and let DevMind watch your pushes before production does."
-              body="Repository reviews appear here after a connected repo receives new code."
+              title="Connect GitHub before production finds the problem first."
+              body="Push reviews appear here after one repository is connected."
             />
           )}
         </section>
       </div>
-
-      <section className="quick-actions-grid">
-        <QuickAction title="Search reviewed code" body="Find snippets by meaning." to="/search" />
-        <QuickAction title="Check GitHub setup" body="Review repository monitoring." to="/github" />
-        <QuickAction title="Adjust review defaults" body="Tune your cockpit posture." to="/settings" />
-      </section>
     </section>
   );
 }
 
-function MetricCard({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <article className="metric-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{note}</small>
-    </article>
-  );
-}
+function getRepeatedRisk(levels: RiskLevel[]) {
+  if (!levels.length) {
+    return {
+      label: "Warning" as RiskLevel,
+      note: "No review pattern yet",
+    };
+  }
 
-function QuickAction({ title, body, to }: { title: string; body: string; to: string }) {
-  return (
-    <Link className="quick-action-card" to={to}>
-      <strong>{title}</strong>
-      <span>{body}</span>
-    </Link>
+  const counts = levels.reduce<Record<RiskLevel, number>>(
+    (current, level) => ({ ...current, [level]: current[level] + 1 }),
+    { Stable: 0, Warning: 0, Risky: 0, Critical: 0 },
   );
+  const [label, count] = (Object.entries(counts) as Array<[RiskLevel, number]>).sort(
+    (left, right) => right[1] - left[1],
+  )[0];
+
+  if (count === 1 && levels.length > 1) {
+    return {
+      label: "Warning" as RiskLevel,
+      note: "No repeated band yet",
+    };
+  }
+
+  return {
+    label,
+    note: `${count} of last ${levels.length} reviews`,
+  };
 }
 
 async function readAutoReviewStream(

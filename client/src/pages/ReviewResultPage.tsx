@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
+import { RiskBadge } from "../components/RiskBadge";
 import { FixSuggestionBlock } from "../components/review/FixSuggestionBlock";
 import { IssueCard } from "../components/review/IssueCard";
 import { ProductionScoreCard } from "../components/review/ProductionScoreCard";
@@ -15,6 +16,7 @@ import {
 import {
   buildReviewIssues,
   countIssuesByGroup,
+  getRiskLevel,
   getSeverityGroup,
   getVerdict,
   toProductionScore,
@@ -143,11 +145,12 @@ export function ReviewResultPage() {
     <section className="review-report-page">
       <header className="report-hero">
         <div>
-          <p className="eyebrow">Senior Engineer Verdict</p>
+          <p className="eyebrow">Senior Verdict</p>
           <h1>{detail.filename}</h1>
           <p>{detail.review.quickVerdict}</p>
           <div className="report-meta">
             <ReviewVerdictBadge verdict={verdict} />
+            <RiskBadge label={getRiskLevel(productionScore)} />
             <span>{detail.language}</span>
             <time dateTime={detail.createdAt}>{formatDate(detail.createdAt)}</time>
           </div>
@@ -158,8 +161,8 @@ export function ReviewResultPage() {
       <section className="top-issues-panel report-panel">
         <div className="section-heading compact">
           <div>
-            <p className="eyebrow">Top 3</p>
-            <h2>Critical path issues</h2>
+            <p className="eyebrow">Hidden Failure Points</p>
+            <h2>What gets rejected first</h2>
           </div>
         </div>
         {topIssues.length ? (
@@ -176,8 +179,8 @@ export function ReviewResultPage() {
       <section className="report-panel">
         <div className="section-heading compact">
           <div>
-            <p className="eyebrow">Findings</p>
-            <h2>Severity review</h2>
+            <p className="eyebrow">Production Readiness Breakdown</p>
+            <h2>Risk by severity</h2>
           </div>
         </div>
         <SeverityTabs activeGroup={activeGroup} counts={counts} onChange={setActiveGroup} />
