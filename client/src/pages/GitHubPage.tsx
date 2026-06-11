@@ -3,6 +3,17 @@ import { EmptyState } from "../components/EmptyState";
 import { API_URL, parseApiError } from "../lib/api";
 import { useAuthStore } from "../store/auth-store";
 
+/** Accepts a full GitHub URL or owner/repo string and returns the owner/repo format. */
+function extractRepoFullName(input: string): string {
+  const trimmed = input.trim();
+  // Strip common GitHub URL prefixes
+  const match = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+\/[^/]+?)(?:\/.*)?$/i);
+  if (match) {
+    return match[1];
+  }
+  return trimmed;
+}
+
 export function GitHubPage() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
@@ -102,7 +113,7 @@ export function GitHubPage() {
           Authorization: `Bearer ${token}`,
         },
         credentials: "include",
-        body: JSON.stringify({ repoFullName: repoFullName.trim() }),
+        body: JSON.stringify({ repoFullName: extractRepoFullName(repoFullName) }),
       });
 
       if (!response.ok) {
@@ -198,7 +209,7 @@ export function GitHubPage() {
                 <input
                   value={repoFullName}
                   onChange={(event) => setRepoFullName(event.target.value)}
-                  placeholder="username/project"
+                  placeholder="owner/repo or https://github.com/owner/repo"
                   disabled={isSaving}
                 />
               </label>
