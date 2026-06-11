@@ -271,7 +271,7 @@ export function DashboardPage() {
           {autoReviews.length ? (
             <div className="auto-review-list">
               {autoReviews.slice(0, 3).map((review) => (
-                <Link className="auto-review-item" key={review.id} to={`/snippets/${review.snippetId}`}>
+                <Link className="auto-review-item" key={review.id} to={`/reviews/${review.id}`}>
                   <div>
                     <strong>{review.filename}</strong>
                     <span>{review.language}</span>

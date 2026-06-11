@@ -147,7 +147,7 @@ reviewsRouter.get(
       where: {
         id: request.params.id as string,
         userId: request.user!.id,
-        source: "manual",
+
       },
       select: {
         id: true,
