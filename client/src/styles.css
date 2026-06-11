@@ -1808,3 +1808,177 @@ p {
     flex-direction: column;
   }
 }
+
+/* ───────── Settings page ───────── */
+
+.settings-panel {
+  display: grid;
+  gap: 1.15rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.settings-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.settings-list > div {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  align-items: center;
+  padding: 0.82rem 1rem;
+  transition: background 0.18s ease;
+}
+
+.settings-list > div:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.settings-list > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.settings-list dt {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings-list dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ───────── GitHub page ───────── */
+
+.github-panel {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.repository-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.015);
+  transition: background 0.18s ease;
+}
+
+.repository-summary:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.repository-summary > div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.repository-summary span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.repository-summary strong {
+  font-size: 1rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.repository-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.repository-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.repository-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.72rem 0.85rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.95rem;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.repository-form input:focus {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.repository-form input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ───────── Skeleton loading ───────── */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.skeleton-stack {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}
+
+.skeleton-stack::before,
+.skeleton-stack::after {
+  content: "";
+  height: 0.85rem;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-stack::before {
+  width: 60%;
+}
+
+.skeleton-stack::after {
+  width: 40%;
+  animation-delay: 0.2s;
+}
