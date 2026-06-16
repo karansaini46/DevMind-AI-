@@ -58,7 +58,7 @@ describe("auth routes", () => {
     const response = await request(app).post("/auth/register").send({
       name: "Person",
       email: "person@example.com",
-      password: "password123",
+      password: "Password123",
     });
 
     expect(response.status).toBe(201);
@@ -73,19 +73,19 @@ describe("auth routes", () => {
     const response = await request(app).post("/auth/register").send({
       name: "Person",
       email: "person@example.com",
-      password: "password123",
+      password: "Password123",
     });
 
     expect(response.status).toBe(409);
   });
 
   it("logs in a user with valid credentials", async () => {
-    const passwordHash = await bcrypt.hash("password123", 4);
+    const passwordHash = await bcrypt.hash("Password123", 4);
     userFindUnique.mockResolvedValueOnce(buildUser({ passwordHash }));
 
     const response = await request(app).post("/auth/login").send({
       email: "person@example.com",
-      password: "password123",
+      password: "Password123",
     });
 
     expect(response.status).toBe(200);

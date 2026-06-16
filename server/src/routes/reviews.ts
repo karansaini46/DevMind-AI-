@@ -1,5 +1,6 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
+import { reviewLimiter } from "../middleware/rate-limit";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import { resolveReviewContext } from "../reviews/language-detection";
@@ -21,7 +22,7 @@ import { subscribeToAutoReviews } from "../services/review-events";
 import { asyncHandler } from "../utils/async-handler";
 
 const reviewRequestSchema = z.object({
-  code: z.string().trim().min(1, "Code is required"),
+  code: z.string().trim().min(1, "Code is required").max(50_000, "Code must be at most 50,000 characters"),
   language: reviewLanguageInputSchema.optional().default("auto"),
   filename: z.string().trim().max(255).optional().default(""),
   mode: reviewModeSchema.optional().default("production"),
@@ -188,6 +189,7 @@ reviewsRouter.get(
 
 reviewsRouter.post(
   "/",
+  reviewLimiter,
   asyncHandler(async (request, response) => {
     const input = toReviewInput(reviewRequestSchema.parse(request.body));
     const snippet = await createSnippet(request.user!.id, input);
@@ -215,7 +217,7 @@ reviewsRouter.post(
   }),
 );
 
-reviewsRouter.post("/stream", async (request, response, next) => {
+reviewsRouter.post("/stream", reviewLimiter, async (request, response, next) => {
   try {
     const input = toReviewInput(reviewRequestSchema.parse(request.body));
     const snippet = await createSnippet(request.user!.id, input);

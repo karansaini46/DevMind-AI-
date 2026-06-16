@@ -9,10 +9,28 @@ const refreshTokenCookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
+/**
+ * Short-lived httpOnly cookie used exclusively during the OAuth redirect.
+ * The client reads the session via POST /auth/refresh, after which this
+ * cookie expires naturally.  It is scoped to /auth so it is never sent
+ * to other endpoints.
+ */
+const accessTokenCookieOptions = {
+  httpOnly: true,
+  sameSite: env.NODE_ENV === "production" ? ("none" as const) : ("lax" as const),
+  secure: env.NODE_ENV === "production",
+  path: "/auth",
+  maxAge: 2 * 60 * 1000,
+};
+
 export function setRefreshTokenCookie(response: Response, token: string) {
   response.cookie("refreshToken", token, refreshTokenCookieOptions);
 }
 
 export function clearRefreshTokenCookie(response: Response) {
   response.clearCookie("refreshToken", refreshTokenCookieOptions);
+}
+
+export function setAccessTokenCookie(response: Response, token: string) {
+  response.cookie("accessToken", token, accessTokenCookieOptions);
 }

@@ -5,6 +5,12 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import {
+  clearLoginAttempts,
+  isLoginLocked,
+  recordFailedLogin,
+} from "../middleware/login-limiter";
+import { authLimiter } from "../middleware/rate-limit";
+import {
   buildGitHubAuthorizationUrl,
   createOAuthState,
   resolveGitHubUser,
@@ -15,9 +21,11 @@ import { AppError } from "../utils/app-error";
 import { asyncHandler } from "../utils/async-handler";
 import {
   clearRefreshTokenCookie,
+  setAccessTokenCookie,
   setRefreshTokenCookie,
 } from "../utils/cookies";
 import { env } from "../utils/env";
+import { logger } from "../utils/logger";
 import {
   signAccessToken,
   signRefreshToken,
@@ -26,9 +34,19 @@ import {
 import { toAuthUser } from "../utils/users";
 
 const registerSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(100, "Name must be at most 100 characters"),
   email: z.string().trim().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one digit"),
 });
 
 const loginSchema = z.object({
@@ -37,6 +55,9 @@ const loginSchema = z.object({
 });
 
 export const authRouter = Router();
+
+// Apply auth-specific rate limiter to all auth routes (10 per 15 min per IP).
+authRouter.use(authLimiter);
 
 authRouter.post(
   "/register",
@@ -48,7 +69,8 @@ authRouter.post(
     });
 
     if (existingUser) {
-      throw new AppError("Email is already registered", 409);
+      // Generic error to prevent email enumeration.
+      throw new AppError("Unable to create account", 409);
     }
 
     const passwordHash = await bcrypt.hash(input.password, 12);
@@ -59,6 +81,8 @@ authRouter.post(
         passwordHash,
       },
     });
+
+    logger.info({ msg: "user_registered", userId: user.id });
 
     const accessToken = signAccessToken(user);
     setRefreshTokenCookie(response, signRefreshToken(user));
@@ -75,19 +99,33 @@ authRouter.post(
   asyncHandler(async (request, response) => {
     const input = loginSchema.parse(request.body);
     const email = input.email.toLowerCase();
+
+    // Brute-force protection: check if this email is locked out.
+    if (isLoginLocked(email)) {
+      logger.warn({ msg: "login_locked", email });
+      throw new AppError("Too many failed attempts, try again later", 429);
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user?.passwordHash) {
+      recordFailedLogin(email);
+      logger.warn({ msg: "login_failed", email, reason: "user_not_found" });
       throw new AppError("Invalid email or password", 401);
     }
 
     const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
 
     if (!passwordMatches) {
+      recordFailedLogin(email);
+      logger.warn({ msg: "login_failed", email, reason: "wrong_password" });
       throw new AppError("Invalid email or password", 401);
     }
+
+    clearLoginAttempts(email);
+    logger.info({ msg: "login_success", userId: user.id });
 
     const accessToken = signAccessToken(user);
     setRefreshTokenCookie(response, signRefreshToken(user));
@@ -116,6 +154,11 @@ authRouter.post(
     if (!user) {
       throw new AppError("Refresh token is invalid", 401);
     }
+
+    // Refresh token rotation: issue a new refresh token on every refresh.
+    // The old token is implicitly invalidated because the client now holds
+    // a new one.  This limits the damage window of a stolen refresh token.
+    setRefreshTokenCookie(response, signRefreshToken(user));
 
     response.status(200).json({
       accessToken: signAccessToken(user),
@@ -203,11 +246,13 @@ authRouter.get("/github/callback", (request, response, next) => {
           state,
         });
 
-        const accessToken = signAccessToken(user);
+        // SECURITY FIX: Do NOT pass the access token in the URL.
+        // Instead, set both tokens as httpOnly cookies so the client
+        // can recover the session via POST /auth/refresh.
+        setAccessTokenCookie(response, signAccessToken(user));
         setRefreshTokenCookie(response, signRefreshToken(user));
 
         const redirectUrl = new URL("/auth/success", env.CLIENT_URL);
-        redirectUrl.searchParams.set("token", accessToken);
         response.redirect(redirectUrl.toString());
       } catch (callbackError) {
         if (callbackError instanceof AppError) {

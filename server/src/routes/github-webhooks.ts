@@ -9,6 +9,7 @@ import { getRepositoryFileContent } from "../services/github-repositories";
 import { asyncHandler } from "../utils/async-handler";
 import { env } from "../utils/env";
 import { decryptGitHubAccessToken } from "../utils/github-token-crypto";
+import { logger } from "../utils/logger";
 
 const supportedLanguages = {
   ".js": "javascript",
@@ -196,7 +197,7 @@ async function queueChangedFiles(input: {
 
   for (const result of results) {
     if (result.status === "rejected") {
-      console.error("Unable to queue webhook file", result.reason);
+      logger.error({ msg: "unable_to_queue_webhook_file", err: result.reason });
     }
   }
 

@@ -9,6 +9,7 @@ import { resolveReviewContext } from "../reviews/language-detection";
 import { createCommitComment } from "../services/github-repositories";
 import { publishAutoReview } from "../services/review-events";
 import { decryptGitHubAccessToken } from "../utils/github-token-crypto";
+import { logger } from "../utils/logger";
 import { getRedisConnectionOptions } from "./redis";
 import { reviewQueueName, type ReviewJobData } from "./reviewQueue";
 
@@ -120,7 +121,7 @@ export function startReviewWorker() {
         }
       }
 
-      console.log(`Completed webhook review for ${job.data.filename}`);
+      logger.info({ msg: "webhook_review_completed", filename: job.data.filename });
       return review;
     },
     {
@@ -129,14 +130,16 @@ export function startReviewWorker() {
   );
 
   reviewWorker.on("failed", (job, error) => {
-    console.error(
-      `Review job ${job?.id ?? "unknown"} failed after attempt ${job?.attemptsMade ?? 0}`,
-      error,
-    );
+    logger.error({
+      msg: "review_job_failed",
+      jobId: job?.id ?? "unknown",
+      attempts: job?.attemptsMade ?? 0,
+      err: error,
+    });
   });
 
   reviewWorker.on("error", (error) => {
-    console.error("Review worker error", error);
+    logger.error({ msg: "review_worker_error", err: error });
   });
 
   return reviewWorker;

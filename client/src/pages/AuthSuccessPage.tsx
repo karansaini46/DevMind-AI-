@@ -4,22 +4,31 @@ import { hasCompletedOnboarding } from "../lib/onboarding";
 import { useAuthStore } from "../store/auth-store";
 
 export function AuthSuccessPage() {
-  const [searchParams] = useSearchParams();
-  const acceptToken = useAuthStore((state) => state.acceptToken);
+  const refreshSession = useAuthStore((state) => state.refreshSession);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    let active = true;
 
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
-    }
+    refreshSession()
+      .then((success) => {
+        if (!active) return;
+        if (success) {
+          navigate(hasCompletedOnboarding() ? "/dashboard" : "/onboarding", { replace: true });
+        } else {
+          navigate("/login", { replace: true });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          navigate("/login", { replace: true });
+        }
+      });
 
-    void acceptToken(token)
-      .then(() => navigate(hasCompletedOnboarding() ? "/dashboard" : "/onboarding", { replace: true }))
-      .catch(() => navigate("/login", { replace: true }));
-  }, [acceptToken, navigate, searchParams]);
+    return () => {
+      active = false;
+    };
+  }, [refreshSession, navigate]);
 
   return (
     <main className="app-shell">

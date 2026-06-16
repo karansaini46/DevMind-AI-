@@ -12,32 +12,26 @@ const envSchema = z.object({
     .url()
     .default("http://localhost:5173")
     .transform((value) => new URL(value).origin),
-  JWT_SECRET: z.string().min(1).default("development-jwt-secret"),
-  JWT_ACCESS_SECRET: z.string().min(1).optional(),
-  JWT_REFRESH_SECRET: z.string().min(1).optional(),
+  JWT_ACCESS_SECRET: z.string().min(16, "JWT_ACCESS_SECRET must be at least 16 characters"),
+  JWT_REFRESH_SECRET: z.string().min(16, "JWT_REFRESH_SECRET must be at least 16 characters"),
   GITHUB_TOKEN_ENCRYPTION_KEY: z
     .string()
-    .min(1)
-    .default("development-github-token-encryption-key"),
+    .min(16, "GITHUB_TOKEN_ENCRYPTION_KEY must be at least 16 characters"),
   GITHUB_CLIENT_ID: z.string().default(""),
   GITHUB_CLIENT_SECRET: z.string().default(""),
   GITHUB_CALLBACK_URL: z
     .string()
     .url()
     .default("http://localhost:3000/auth/github/callback"),
-  GITHUB_WEBHOOK_SECRET: z.string().min(1).default("development-webhook-secret"),
+  GITHUB_WEBHOOK_SECRET: z
+    .string()
+    .min(8, "GITHUB_WEBHOOK_SECRET must be at least 8 characters"),
   WEBHOOK_URL: z
     .string()
     .url()
     .default("http://localhost:3000/webhooks/github"),
-  GEMINI_API_KEY: z.string().default(""),
+  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
   REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 
-const parsedEnv = envSchema.parse(process.env);
-
-export const env = {
-  ...parsedEnv,
-  JWT_ACCESS_SECRET: parsedEnv.JWT_ACCESS_SECRET ?? parsedEnv.JWT_SECRET,
-  JWT_REFRESH_SECRET: parsedEnv.JWT_REFRESH_SECRET ?? parsedEnv.JWT_SECRET,
-};
+export const env = envSchema.parse(process.env);

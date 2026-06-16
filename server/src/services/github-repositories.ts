@@ -1,4 +1,5 @@
 import { AppError } from "../utils/app-error";
+import { logger } from "../utils/logger";
 
 const githubApiBaseUrl = "https://api.github.com";
 
@@ -62,7 +63,7 @@ export async function createCommitComment(input: {
     });
   } catch (error) {
     // Don't throw — commenting is best-effort so it doesn't break the review flow
-    console.error("Failed to post commit comment", error);
+    logger.error({ msg: "failed_to_post_commit_comment", err: error });
   }
 }
 

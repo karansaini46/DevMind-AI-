@@ -1,6 +1,7 @@
 import { embedAndStore } from "../embeddings/service";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/app-error";
+import { logger } from "../utils/logger";
 import { createStructuredReview, type ReviewInput } from "./chains";
 import { renderReviewMarkdown } from "./markdown";
 import type {
@@ -71,7 +72,7 @@ export async function indexSnippet(snippetId: string, code: string) {
     await embedAndStore(snippetId, code);
     return true;
   } catch (error) {
-    console.error(`Unable to index snippet ${snippetId}`, error);
+    logger.error({ msg: "unable_to_index_snippet", snippetId, err: error });
     return false;
   }
 }
